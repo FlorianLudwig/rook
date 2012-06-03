@@ -1,4 +1,5 @@
 import rw
 
-def main(argv):
+def main():
     rw.start('rook.de')
+

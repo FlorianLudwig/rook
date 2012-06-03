@@ -1,0 +1,22 @@
+{% extends 'rw:html5' %}
+
+{% block body %}
+<ul style="color: #f00;">
+{% for msg in messages %}
+ <li>{{ msg }}</li>
+{% endfor %}
+</ul>
+
+
+<h2>Flex installs</h2>
+<ul>
+{% for version, path in flex.items() %}
+ <li>{{ version }} @ {{ path }}</li>
+{% endfor %}
+</ul>
+
+<h2>Add flex install</h2> 
+<form method="post">
+ <input name="path"><input type="submit">
+</form>
+{% endblock %}
