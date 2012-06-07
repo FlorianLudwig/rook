@@ -219,3 +219,15 @@ class SDK(object):
         proc = sp.Popen([self.path + '/bin/mxmlc'] + list(args))
         proc.wait()
 
+    def swc(self, name, src='src', requiers=[]):
+        lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
+        if not os.path.exists(lib_dir):
+            os.makedirs(lib_dir)
+        args = []
+        for req in requiers:
+            args.append('-compiler.include-libraries+=%s%s.swc' % (lib_dir, req))
+        self.compc('-source-path', src,
+                   '-include-sources', src,
+                   '-output', lib_dir + name + '.swc',
+                   '-optimize', *args)
+

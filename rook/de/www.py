@@ -36,9 +36,13 @@ class Main(RequestHandler):
             self['path'] = path
             self['error'] = e.message
             self.finish(template='error.html')
-        print 'installed', version
         flex.CONFIG[version] = path
         flex.save_config()
         self['messages'] = ['Flex %s at %s added' % (version, path)]
         self.index()
 
+
+    @get('/repo')
+    def repo(self):
+        self['list'] = self
+        self.finish(template='repo.html')
