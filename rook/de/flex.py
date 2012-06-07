@@ -230,5 +230,6 @@ class SDK(object):
                    '-include-sources', src,
                    '-output', output,
                    '-optimize'])
+        print [self.path + '/bin/' + cmd] + list(args)
         proc = sp.Popen([self.path + '/bin/' + cmd] + list(args))
         proc.wait()
