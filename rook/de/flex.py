@@ -211,23 +211,24 @@ class SDK(object):
         self.path = CONFIG[version]
         check_install(self.path)
 
-    def compc(self, *args):
-        proc = sp.Popen([self.path + '/bin/compc'] + list(args))
-        proc.wait()
-
-    def mxmlc(self, *args):
-        proc = sp.Popen([self.path + '/bin/mxmlc'] + list(args))
-        proc.wait()
-
     def swc(self, name, src='src', requiers=[]):
+        lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
+        self.run('compc', src=src, requiers=requiers, output=lib_dir + name + '.swc')
+
+    def swf(self, name, src='src', requiers=[]):
+        self.run('mxmlc', src=src, requiers=requiers, output='bin/' + name + '.swf')
+
+    def run(self, cmd, src='src', requiers=[], output=None, args=None):
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
         if not os.path.exists(lib_dir):
             os.makedirs(lib_dir)
-        args = []
+        if args is None:
+            args = []
         for req in requiers:
             args.append('-compiler.include-libraries+=%s%s.swc' % (lib_dir, req))
-        self.compc('-source-path', src,
+        args.extend(['-source-path', src,
                    '-include-sources', src,
-                   '-output', lib_dir + name + '.swc',
-                   '-optimize', *args)
-
+                   '-output', output,
+                   '-optimize'])
+        proc = sp.Popen([self.path + '/bin/' + cmd] + list(args))
+        proc.wait()
