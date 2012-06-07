@@ -211,24 +211,24 @@ class SDK(object):
         self.path = CONFIG[version]
         check_install(self.path)
 
-    def swc(self, name, src='src', requiers=[]):
+    def swc(self, name, src='src', requires=[]):
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
         args = ['-include-sources', src]
-        self.run('compc', src=src, requiers=requiers, 
+        self.run('compc', src=src, requires=requires, 
                  output=lib_dir + name + '.swc', args=args)
 
-    def swf(self, name, target, src='src', requiers=[]):
-        self.run('mxmlc', src=src, requiers=requiers, 
+    def swf(self, name, target, src='src', requires=[]):
+        self.run('mxmlc', src=src, requires=requires, 
                  output='bin/' + name + '.swf', 
                  target=target)
 
-    def run(self, cmd, src='src', requiers=[], output=None, target=None, args=None):
+    def run(self, cmd, src='src', requires=[], output=None, target=None, args=None):
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
         if not os.path.exists(lib_dir):
             os.makedirs(lib_dir)
         if args is None:
             args = []
-        for req in requiers:
+        for req in requires:
             args.append('-compiler.include-libraries+=%s%s.swc' % (lib_dir, req))
         if target:
             args.insert(0, target)
