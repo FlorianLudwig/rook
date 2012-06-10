@@ -211,16 +211,23 @@ class SDK(object):
         self.path = CONFIG[version]
         check_install(self.path)
 
-    def swc(self, name, src='src', requires=[]):
+    def swc(self, name, src='src', requires=[], output=None, args=None):
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
-        args = ['-include-sources', src]
+        if not args:
+            args = []
+        args += ['-include-sources', src]
+        if not output:
+            output = lib_dir + name + '.swc'
         self.run('compc', src=src, requires=requires, 
-                 output=lib_dir + name + '.swc', args=args)
+                 output=output, args=args)
 
-    def swf(self, name, target, src='src', requires=[]):
+    def swf(self, name, target, src='src', requires=[], output=None, args=None):
+        if not output:
+            output = 'bin/' + name + '.swf'
         self.run('mxmlc', src=src, requires=requires, 
-                 output='bin/' + name + '.swf', 
-                 target=target)
+                 output=output, 
+                 target=target,
+                 args=args)
 
     def run(self, cmd, src='src', requires=[], output=None, target=None, args=None):
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
