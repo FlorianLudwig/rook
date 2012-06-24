@@ -211,32 +211,37 @@ class SDK(object):
         self.path = CONFIG[version]
         check_install(self.path)
 
-    def swc(self, name, src='src', requires=[], output=None, args=None):
+    def swc(self, name, src='src', requires=[], external=None, output=None, args=None):
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
         if not args:
             args = []
         args += ['-include-sources', src]
         if not output:
             output = lib_dir + name + '.swc'
-        self.run('compc', src=src, requires=requires, 
+        self.run('compc', src=src, requires=requires, external=external
                  output=output, args=args)
 
-    def swf(self, name, target, src='src', requires=[], output=None, args=None):
+    def swf(self, name, target, src='src', requires=[], external=None, output=None, args=None):
         if not output:
             output = 'bin/' + name + '.swf'
         self.run('mxmlc', src=src, requires=requires, 
-                 output=output, 
+                 external=external,
+                 output=output,
                  target=target,
                  args=args)
 
-    def run(self, cmd, src='src', requires=[], output=None, target=None, args=None):
+    def run(self, cmd, src='src', requires=[], external=None,
+            output=None, target=None, args=None):
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
         if not os.path.exists(lib_dir):
             os.makedirs(lib_dir)
         if args is None:
             args = []
+        if external:
+            for ext in external:
+                args += '-external-library-path+=%s'%ext
         for req in requires:
-            args.append('-compiler.include-libraries+=%s%s.swc' % (lib_dir, req))
+            args += '-compiler.include-libraries+=%s%s.swc' % (lib_dir, req)
         if target:
             args.insert(0, target)
         args.extend(['-source-path', src,
