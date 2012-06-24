@@ -218,7 +218,7 @@ class SDK(object):
         args += ['-include-sources', src]
         if not output:
             output = lib_dir + name + '.swc'
-        self.run('compc', src=src, requires=requires, external=external
+        self.run('compc', src=src, requires=requires, external=external,
                  output=output, args=args)
 
     def swf(self, name, target, src='src', requires=[], external=None, output=None, args=None):
@@ -239,9 +239,9 @@ class SDK(object):
             args = []
         if external:
             for ext in external:
-                args += '-external-library-path+=%s'%ext
+                args.extend(['-external-library-path+=%s%s.swc' % (lib_dir, ext)])
         for req in requires:
-            args += '-compiler.include-libraries+=%s%s.swc' % (lib_dir, req)
+            args.extend(['-compiler.include-libraries+=%s%s.swc' % (lib_dir, req)])
         if target:
             args.insert(0, target)
         args.extend(['-source-path', src,
