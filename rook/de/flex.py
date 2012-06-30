@@ -57,6 +57,7 @@ def fix_permissions():
 
 
 class ErrorParser(object):
+    """Parser for Adobe Flex Compiler"""
     def __init__(self):
         self.stderr = ''
 
@@ -99,6 +100,7 @@ error_parser = ErrorParser()
 
 
 class CompileShell(object):
+    """Wrapper around fcsh - the Adobe Flex SDK Compiler Shell"""
     def __init__(self, path):
         self.targets = {}
         self.log = ''
@@ -203,6 +205,7 @@ class CompileShell(object):
 
 
 class SDK(object):
+    """Represents a SDK in a specific version"""
     def __init__(self, version):
         if not version in CONFIG:
             msg = 'Version "%s" not configured. Avialable: %s'
@@ -250,3 +253,5 @@ class SDK(object):
         print 'compiling', ' '.join([self.path + '/bin/' + cmd] + list(args))
         proc = sp.Popen([self.path + '/bin/' + cmd] + list(args))
         proc.wait()
+
+
