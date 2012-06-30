@@ -1,0 +1,1 @@
+-e git+git@leijuna.de:rueckenwind#egg=rueckenwind
