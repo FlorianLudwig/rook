@@ -7,6 +7,8 @@ setup(
     entry_points = {
         'console_scripts': [
             'rookd = rook.de:main',
+            'rmake = rook.build:main',
+            'repo_check = rook.repo_check:main'
         ],
     },
 )

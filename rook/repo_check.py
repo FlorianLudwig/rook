@@ -13,13 +13,11 @@ def git_status(dir):
         except InvalidGitRepositoryError:
             print "Ignore", full_dir
             continue
-        assert len(repo.remotes) == 1, repo.remotes
-        
-        repo.remotes[0].fetch()
+
+        for remote in repo.remotes:
+            remote.fetch()
 
         print "Dir:", full_dir.split('/')[-1]
-
-
         print "Is dirty:", repo.is_dirty()
 
 #        if len(repo.untracked_files) > 0:
@@ -32,7 +30,7 @@ def git_status(dir):
 
         push_commits = commits_local.difference(commits_origin)
         if len(push_commits) > 0:
-            print "Commits to push (" + str(len(push_commits)) + "):"            
+            print "Commits to push (" + str(len(push_commits)) + "):"
             print_commits(push_commits)
         pull_commits = commits_origin.difference(commits_local)
         if len(pull_commits) > 0:
@@ -40,7 +38,7 @@ def git_status(dir):
             print_commits(pull_commits)
 
     #        for commit in list(repo.iter_commits('origin/master')):
-    #                       print commit 
+    #                       print commit
 
     #               print "since", repo.commits_since()
 
@@ -54,5 +52,14 @@ def print_commits(commits):
 def get_dirs_with_fullpath(dir):
     return [os.path.join(dir, f) for f in os.listdir(dir) if os.path.isdir(os.path.join(dir, f))]
 
+
+def main():
+    if len(sys.argv) == 1:
+        git_status('.')
+    else:
+        git_status(sys.argv[1])
+
+
 if __name__ == '__main__':
-    git_status(sys.argv[1])
+    main()
+
