@@ -1,32 +1,50 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 
 from sets import Set
 from git import Repo, InvalidGitRepositoryError
 import os, sys, time
+import argparse
+import re
 
 
-def is_git_repo(dir):
+def is_git_repo(dir):   
     if os.path.isdir(dir + '/.git'):
         return True
     else:
         return False
 
-def check_dirs(dir):
+def get_top_folder(dir):
+    if is_git_repo(dir):
+        return dir
+    elif dir == '/':
+        return ''
+    else:
+        return get_top_folder(os.path.dirname(dir))
+
+def check_dirs(dir, args):
     dirs = get_dirs_with_fullpath(dir)
     for full_dir in dirs:
-        git_status(full_dir)
+        git_status(full_dir, args)
 
-def git_status(dir):
+def git_status(dir, args):
     dir = os.path.realpath(dir)
     try:
         repo = Repo(dir)
     except InvalidGitRepositoryError:
-        print "Ignore", dir
         return
 
     for remote in repo.remotes:
         remote.fetch()
 
+    if args.pull:
+        for remote in repo.remotes:
+            remote.pull()
+            
+    if args.push:
+        for remote in repo.remotes:
+            remote.push()
+            
     name = dir.split('/')[-1]
     if repo.is_dirty():
         name += '*'
@@ -59,7 +77,7 @@ def print_commits(commits):
     for i, commit in enumerate(commits):
         if i > 3:
             break
-        print time.strftime("%Y-%m-%d %H:%M", time.localtime(commit.committed_date)), commit.author.email + " : " + commit.message.split("\n")[0]
+        print time.strftime("%Y-%m-%d %H:%M", time.localtime(commit.committed_date)), commit.author.email + ' : ' + commit.message.split("\n")[0] + '…'
 
 
 def get_dirs_with_fullpath(dir):
@@ -78,14 +96,27 @@ def bold(t):
     return color(t, 1)
 
 def main():
-    dir = '.'
-    if len(sys.argv) > 1:
-        dir = sys.argv[1]
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--pull', action="store_true", help='Pull commits')
+    parser.add_argument('-P', '--push', action="store_true", help='Push commits')
+    parser.add_argument('-r', '--regex', help="RegEx to search in your virtualenv")
+    args = parser.parse_args()
+    
+    env_dir = os.environ['VIRTUAL_ENV'] + '/src/'
+    self_dir = os.path.realpath('.')
 
-    if is_git_repo(dir):
-        git_status(dir)
+    top_dir = get_top_folder(self_dir) 
+
+    if args.regex:
+        for f in os.listdir(env_dir):
+            if re.match(sys.argv[1], args.regex):
+                git_status(env_dir + f, args)
+        
+    elif len(top_dir) > 0:
+            git_status(top_dir, args)
     else:
-        check_dirs(dir)            
+        check_dirs(env_dir, args)
 
 if __name__ == '__main__':
     main()
