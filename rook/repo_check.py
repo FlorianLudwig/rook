@@ -65,9 +65,6 @@ def git_status(dir, args):
     push_commits = sorted(push_commits)
     pull_commits = sorted(pull_commits)
 
-    if len(push_commits) > 0 or len(pull_commits) > 0:
-        print ""
-
     if len(push_commits) > 0:
         print red("Commits to push (" + str(len(push_commits)) + "):")
         print_commits(push_commits)
@@ -75,12 +72,19 @@ def git_status(dir, args):
         print red("Commits to pull (" + str(len(pull_commits)) + "):")
         print_commits(pull_commits)
 
+    if len(push_commits) > 0 or len(pull_commits) > 0:
+        print
+
 
 def print_commits(commits):
     for i, commit in enumerate(commits):
         if i > 3:
             break
-        print time.strftime("%Y-%m-%d %H:%M", time.localtime(commit.committed_date)), commit.author.email + ' : ' + commit.message.split("\n")[0] + '…'
+        msg = commit.message.strip()
+        if '\n' in msg:
+            msg = msg.split("\n")[0] + u'…'
+        date = time.strftime("%Y-%m-%d %H:%M", time.localtime(commit.committed_date))
+        print ' %s %s: %s' % (date, commit.author.email, msg)
 
 
 def get_dirs_with_fullpath(dir):
@@ -107,7 +111,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--pull', action="store_true", help='Pull commits')
     parser.add_argument('-P', '--push', action="store_true", help='Push commits')
-    parser.add_argument('-r', '--regex', help="RegEx to search in your virtualenv")
+    parser.add_argument('regex', metavar='REGEX', nargs='?',
+                        help='RegEx to search in your virtualenv')
     args = parser.parse_args()
 
     env_dir = os.environ['VIRTUAL_ENV'] + '/src/'
@@ -116,14 +121,16 @@ def main():
     top_dir = get_top_folder(self_dir)
 
     if args.regex:
+        regex = re.compile(args.regex)
         for f in os.listdir(env_dir):
-            if re.match(sys.argv[1], args.regex):
+            if regex.search(f):
                 git_status(env_dir + f, args)
 
     elif len(top_dir) > 0:
             git_status(top_dir, args)
     else:
         check_dirs(env_dir, args)
+
 
 if __name__ == '__main__':
     main()
