@@ -38,8 +38,11 @@ def git_status(dir):
     commits_origin = Set(repo.iter_commits('origin/master'))
     commits_local = Set(repo.iter_commits())
 
-    push_commits = commits_local.difference(commits_origin)
-    pull_commits = commits_origin.difference(commits_local)
+    push_commits = list(commits_local.difference(commits_origin))
+    pull_commits = list(commits_origin.difference(commits_local))
+    
+    push_commits = sorted(push_commits)
+    pull_commits = sorted(pull_commits)
 
     if len(push_commits) > 0 or len(pull_commits) > 0:
         print ""
@@ -53,8 +56,10 @@ def git_status(dir):
 
 
 def print_commits(commits):
-    for commit in commits:
-        print commit.hexsha, time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime(commit.committed_date)), commit.author.name, commit.author.email
+    for i, commit in enumerate(commits):
+        if i > 3:
+            break
+        print time.strftime("%d %b %Y %H:%M", time.localtime(commit.committed_date)), commit.author.email
         print commit.message
 
 
