@@ -27,13 +27,13 @@ def git_status(dir):
     for remote in repo.remotes:
         remote.fetch()
 
-    title = dir.split('/')[-1]
+    name = dir.split('/')[-1]
     if repo.is_dirty():
-        title += '*'
+        name += '*'
+    title = bold(name)
 
-    title += ' ' + ' '.join(green(branch.name) if branch == repo.active_branch else branch.name
-                     for branch in repo.branches) 
-    print bold(title)
+    title += ' ' + green(repo.active_branch.name) + ' '.join(branch.name for branch in repo.branches if branch != repo.active_branch) 
+    print title
     print ""
 
     commits_origin = Set(repo.iter_commits('origin/master'))
