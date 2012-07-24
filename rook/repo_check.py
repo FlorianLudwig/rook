@@ -75,7 +75,7 @@ def _git_status(dir, args, repo):
             #remote.pull()
             sp.Popen(['git', 'pull', remote.name], cwd=dir).wait()
             newline = True
-    else:
+    elif not args.cache:
         for remote in repo.remotes:
             remote.fetch()
 
@@ -88,11 +88,8 @@ def _git_status(dir, args, repo):
     commits_origin = set(repo.iter_commits('origin/master'))
     commits_local = set(repo.iter_commits())
 
-    push_commits = list(commits_local.difference(commits_origin))
-    pull_commits = list(commits_origin.difference(commits_local))
-
-    push_commits = sorted(push_commits)
-    pull_commits = sorted(pull_commits)
+    push_commits = sorted(commits_local.difference(commits_origin))
+    pull_commits = sorted(commits_origin.difference(commits_local))
 
     if len(push_commits) > 0:
         print cyan("Commits to push (" + str(len(push_commits)) + "):")
@@ -149,6 +146,7 @@ def main():
     parser.add_argument('-p', '--pull', action="store_true", help='Pull commits')
     parser.add_argument('-P', '--push', action="store_true", help='Push commits')
     parser.add_argument('-d', '--only-dirty', action="store_true", help='only dirty repositories')
+    parser.add_argument('-C', '--cache', action="store_true", help="Do not hit the network, use local avaiable information only")
     parser.add_argument('regex', metavar='REGEX', nargs='?',
                         help='RegEx to search in your virtualenv')
     args = parser.parse_args()
