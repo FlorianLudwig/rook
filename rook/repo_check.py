@@ -49,6 +49,13 @@ def git_status(dir, args):
     except InvalidGitRepositoryError:
         return
 
+    try:
+        _git_status(dir, args, repo)
+    except:
+        print red('ERROR processing repo ' + dir)
+        raise
+
+def _git_status(dir, args, repo):
     for remote in repo.remotes:
         remote.fetch()
 
@@ -78,10 +85,10 @@ def git_status(dir, args):
     pull_commits = sorted(pull_commits)
 
     if len(push_commits) > 0:
-        print red("Commits to push (" + str(len(push_commits)) + "):")
+        print cyan("Commits to push (" + str(len(push_commits)) + "):")
         print_commits(push_commits)
     if len(pull_commits) > 0:
-        print red("Commits to pull (" + str(len(pull_commits)) + "):")
+        print cyan("Commits to pull (" + str(len(pull_commits)) + "):")
         print_commits(pull_commits)
 
     if len(push_commits) > 0 or len(pull_commits) > 0:
@@ -109,6 +116,10 @@ def color(t, c):
 
 def red(t):
     return color(t, 31)
+
+
+def cyan(t):
+    return color(t, 36)
 
 
 def green(t):
