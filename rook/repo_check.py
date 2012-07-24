@@ -34,16 +34,19 @@ def git_status(dir):
 
     title += ' ' + green(repo.active_branch.name) + ' ' + ' '.join(branch.name for branch in repo.branches if branch != repo.active_branch) 
     print title
-    print ""
 
     commits_origin = Set(repo.iter_commits('origin/master'))
     commits_local = Set(repo.iter_commits())
 
     push_commits = commits_local.difference(commits_origin)
+    pull_commits = commits_origin.difference(commits_local)
+
+    if len(push_commits) > 0 or len(pull_commits) > 0:
+        print ""
+
     if len(push_commits) > 0:
         print red("Commits to push (" + str(len(push_commits)) + "):")
         print_commits(push_commits)
-    pull_commits = commits_origin.difference(commits_local)
     if len(pull_commits) > 0:
         print red("Commits to pull (" + str(len(pull_commits)) + "):")
         print_commits(pull_commits)
