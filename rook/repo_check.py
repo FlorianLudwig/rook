@@ -13,11 +13,12 @@ folder are used.
 
 """
 
-from sets import Set
 from git import Repo, InvalidGitRepositoryError
-import os, time
+import os, sys
+import time
 import argparse
 import re
+import subprocess as sp
 
 
 def is_git_repo(dir):
@@ -56,27 +57,36 @@ def git_status(dir, args):
         raise
 
 def _git_status(dir, args, repo):
-    for remote in repo.remotes:
-        remote.fetch()
-
-    if args.pull:
-        for remote in repo.remotes:
-            remote.pull()
-
-    if args.push:
-        for remote in repo.remotes:
-            remote.push()
-
     name = dir.split('/')[-1]
     if repo.is_dirty():
         name += '*'
-    title = bold(name)
+    elif args.only_dirty:
+        # show only dirty
+        return
 
-    title += ' ' + green(repo.active_branch.name) + ' ' + ' '.join(branch.name for branch in repo.branches if branch != repo.active_branch)
+    sys.stdout.write(bold(name))
+
+    title = ' ' + green(repo.active_branch.name) + ' ' + ' '.join(branch.name for branch in repo.branches if branch != repo.active_branch)
     print title
+    newline = False
 
-    commits_origin = Set(repo.iter_commits('origin/master'))
-    commits_local = Set(repo.iter_commits())
+    if args.pull:
+        for remote in repo.remotes:
+            #remote.pull()
+            sp.Popen(['git', 'pull', remote.name], cwd=dir).wait()
+            newline = True
+    else:
+        for remote in repo.remotes:
+            remote.fetch()
+
+    if args.push:
+        for remote in repo.remotes:
+            #remote.push()
+            sp.Popen(['git', 'push', remote.name], cwd=dir).wait()
+            newline = True
+
+    commits_origin = set(repo.iter_commits('origin/master'))
+    commits_local = set(repo.iter_commits())
 
     push_commits = list(commits_local.difference(commits_origin))
     pull_commits = list(commits_origin.difference(commits_local))
@@ -87,11 +97,14 @@ def _git_status(dir, args, repo):
     if len(push_commits) > 0:
         print cyan("Commits to push (" + str(len(push_commits)) + "):")
         print_commits(push_commits)
+        newline = True
+
     if len(pull_commits) > 0:
         print cyan("Commits to pull (" + str(len(pull_commits)) + "):")
         print_commits(pull_commits)
+        newline = True
 
-    if len(push_commits) > 0 or len(pull_commits) > 0:
+    if newline:
         print
 
 
@@ -135,6 +148,7 @@ def main():
                                      formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-p', '--pull', action="store_true", help='Pull commits')
     parser.add_argument('-P', '--push', action="store_true", help='Push commits')
+    parser.add_argument('-d', '--only-dirty', action="store_true", help='only dirty repositories')
     parser.add_argument('regex', metavar='REGEX', nargs='?',
                         help='RegEx to search in your virtualenv')
     args = parser.parse_args()
