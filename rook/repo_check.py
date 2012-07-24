@@ -32,7 +32,7 @@ def git_status(dir):
         name += '*'
     title = bold(name)
 
-    title += ' ' + green(repo.active_branch.name) + ' '.join(branch.name for branch in repo.branches if branch != repo.active_branch) 
+    title += ' ' + green(repo.active_branch.name) + ' ' + ' '.join(branch.name for branch in repo.branches if branch != repo.active_branch) 
     print title
     print ""
 
