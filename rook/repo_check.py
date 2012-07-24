@@ -1,9 +1,21 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
+"""checks git status in one ore mor repsotories
+
+If executes without REGEX argument
+ - within a repository it shows status of the current repository
+ - of outside of a repo it shows the status of all within your $VIRTUAL_ENV/src folder
+
+when a REGEX argument is given all repositories that match from your $VIRTUAL_ENV/src
+folder are used.
+
+
+"""
+
 from sets import Set
 from git import Repo, InvalidGitRepositoryError
-import os, sys, time
+import os, time
 import argparse
 import re
 
@@ -108,7 +120,8 @@ def bold(t):
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-p', '--pull', action="store_true", help='Pull commits')
     parser.add_argument('-P', '--push', action="store_true", help='Push commits')
     parser.add_argument('regex', metavar='REGEX', nargs='?',
