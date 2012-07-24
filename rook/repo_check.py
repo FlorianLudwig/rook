@@ -59,8 +59,7 @@ def print_commits(commits):
     for i, commit in enumerate(commits):
         if i > 3:
             break
-        print time.strftime("%d %b %Y %H:%M", time.localtime(commit.committed_date)), commit.author.email
-        print commit.message
+        print time.strftime("%Y-%m-%d %H:%M", time.localtime(commit.committed_date)), commit.author.email + " : " + commit.message.split("\n")[0]
 
 
 def get_dirs_with_fullpath(dir):
