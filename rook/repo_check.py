@@ -1,11 +1,11 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-"""checks git status in one ore mor repsotories
+"""checks git status in one or more repositories
 
 If executes without REGEX argument
  - within a repository it shows status of the current repository
- - of outside of a repo it shows the status of all within your $VIRTUAL_ENV/src folder
+ - outside of a repo it shows the status of all within your $VIRTUAL_ENV/src folder
 
 when a REGEX argument is given all repositories that match from your $VIRTUAL_ENV/src
 folder are used.
@@ -117,7 +117,7 @@ def print_commits(commits):
 
 
 def get_dirs_with_fullpath(dir):
-    return [os.path.join(dir, f) for f in os.listdir(dir) if os.path.isdir(os.path.join(dir, f))]
+    return sorted([os.path.join(dir, f) for f in os.listdir(dir) if os.path.isdir(os.path.join(dir, f))])
 
 
 def color(t, c):
