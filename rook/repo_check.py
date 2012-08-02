@@ -19,7 +19,9 @@ import time
 import argparse
 import re
 import subprocess as sp
+from threading import Thread
 
+git_threads = []
 
 def is_git_repo(dir):
     if os.path.isdir(dir + '/.git'):
@@ -44,101 +46,115 @@ def check_dirs(dir, args):
 
 
 def git_status(dir, args):
-    dir = os.path.realpath(dir)
-    try:
-        repo = Repo(dir)
-    except InvalidGitRepositoryError:
-        return
+    thread = GitStatus(dir, args)
+    git_threads.append(thread)
+    thread.start()
 
-    try:
-        _git_status(dir, args, repo)
-    except:
-        print red('ERROR processing repo ' + dir)
-        raise
 
-def _git_status(dir, args, repo):
-    name = dir.split('/')[-1]
-    if repo.is_dirty():
-        name += '*'
-    elif args.only_dirty:
-        # show only dirty
-        return
+class GitStatus(Thread):
+    def __init__ (self, dir, args):
+        Thread.__init__(self)
+        self.dir = os.path.realpath(dir)
+        self.args = args
 
-    sys.stdout.write(bold(name))
+    def run(self):
+        try:
+            print self._git_status(self.dir, self.args)
+        except:
+            print self.red('ERROR processing repo ' + self.dir)
+            raise
 
-    title = ' ' + green(repo.active_branch.name) + ' ' + ' '.join(branch.name for branch in repo.branches if branch != repo.active_branch)
-    print title
-    newline = False
+    def _git_status(self, dir, args):
+        result = ""
+        try:
+            repo = Repo(dir)
+        except InvalidGitRepositoryError:
+            return
+        name = dir.split('/')[-1]
+        if repo.is_dirty():
+            name += '*'
+        elif args.only_dirty:
+            # show only dirty
+            return
 
-    if args.pull:
-        for remote in repo.remotes:
-            #remote.pull()
-            sp.Popen(['git', 'pull', remote.name], cwd=dir).wait()
+        result += self.bold(name)
+
+        title = ' ' + self.green(repo.active_branch.name) + ' ' + \
+                ' '.join(branch.name for branch in repo.branches if branch != repo.active_branch)
+        result += title + "\n"
+        newline = False
+
+        if args.pull:
+            for remote in repo.remotes:
+                #remote.pull()
+                sp.Popen(['git', 'pull', remote.name], cwd=dir).wait()
+                newline = True
+        elif not args.cache:
+            for remote in repo.remotes:
+                remote.fetch()
+
+        if args.push:
+            for remote in repo.remotes:
+                #remote.push()
+                sp.Popen(['git', 'push', remote.name], cwd=dir).wait()
+                newline = True
+
+        commits_origin = set(repo.iter_commits('origin/master'))
+        commits_local = set(repo.iter_commits())
+
+        push_commits = sorted(commits_local.difference(commits_origin))
+        pull_commits = sorted(commits_origin.difference(commits_local))
+
+        if len(push_commits) > 0:
+            result += self.cyan("Commits to push (" + str(len(push_commits)) + "):") + "\n"
+            result += self.print_commits(push_commits)
             newline = True
-    elif not args.cache:
-        for remote in repo.remotes:
-            remote.fetch()
 
-    if args.push:
-        for remote in repo.remotes:
-            #remote.push()
-            sp.Popen(['git', 'push', remote.name], cwd=dir).wait()
+        if len(pull_commits) > 0:
+            result += self.cyan("Commits to pull (" + str(len(pull_commits)) + "):") + "\n"
+            result += self.print_commits(pull_commits)
             newline = True
 
-    commits_origin = set(repo.iter_commits('origin/master'))
-    commits_local = set(repo.iter_commits())
+        if newline:
+            result += "\n"
 
-    push_commits = sorted(commits_local.difference(commits_origin))
-    pull_commits = sorted(commits_origin.difference(commits_local))
-
-    if len(push_commits) > 0:
-        print cyan("Commits to push (" + str(len(push_commits)) + "):")
-        print_commits(push_commits)
-        newline = True
-
-    if len(pull_commits) > 0:
-        print cyan("Commits to pull (" + str(len(pull_commits)) + "):")
-        print_commits(pull_commits)
-        newline = True
-
-    if newline:
-        print
+        return result
 
 
-def print_commits(commits):
-    for i, commit in enumerate(commits):
-        if i > 3:
-            break
-        msg = commit.message.strip()
-        if '\n' in msg:
-            msg = msg.split("\n")[0] + u'…'
-        date = time.strftime("%Y-%m-%d %H:%M", time.localtime(commit.committed_date))
-        print ' %s %s: %s' % (date, commit.author.email, msg)
+    def print_commits(self, commits):
+        result = ""
+        for i, commit in enumerate(commits):
+            if i > 3:
+                break
+            msg = commit.message.strip()
+            if '\n' in msg:
+                msg = msg.split("\n")[0] + u'…'
+            date = time.strftime("%Y-%m-%d %H:%M", time.localtime(commit.committed_date))
+            result += ' %s %s: %s' % (date, commit.author.email, msg) + "\n"
 
+        return result
+
+    def color(self, t, c):
+        return chr(0x1b) + "["+str(c) + "m" + t + chr(0x1b) + "[0m"
+
+
+    def red(self, t):
+        return self.color(t, 31)
+
+
+    def cyan(self, t):
+        return self.color(t, 36)
+
+
+    def green(self, t):
+        return self.color(t, 32)
+
+
+    def bold(self, t):
+        return self.color(t, 1)
 
 def get_dirs_with_fullpath(dir):
     return sorted([os.path.join(dir, f) for f in os.listdir(dir) if os.path.isdir(os.path.join(dir, f))])
-
-
-def color(t, c):
-    return chr(0x1b)+"["+str(c)+"m"+t+chr(0x1b)+"[0m"
-
-
-def red(t):
-    return color(t, 31)
-
-
-def cyan(t):
-    return color(t, 36)
-
-
-def green(t):
-    return color(t, 32)
-
-
-def bold(t):
-    return color(t, 1)
-
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
