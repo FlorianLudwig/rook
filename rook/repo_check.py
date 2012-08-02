@@ -19,9 +19,10 @@ import time
 import argparse
 import re
 import subprocess as sp
-from threading import Thread
+from threading import Thread, Lock
 
 git_threads = []
+lock = Lock()
 
 def is_git_repo(dir):
     if os.path.isdir(dir + '/.git'):
@@ -91,7 +92,11 @@ class GitStatus(Thread):
                 newline = True
         elif not args.cache:
             for remote in repo.remotes:
-                remote.fetch()
+                lock.acquire()
+                try:
+                    remote.fetch()
+                finally:
+                    lock.release()
 
         if args.push:
             for remote in repo.remotes:
