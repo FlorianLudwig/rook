@@ -19,10 +19,10 @@ import time
 import argparse
 import re
 import subprocess as sp
-from threading import Thread, Lock
+from threading import Semaphore, Thread
 
 git_threads = []
-lock = Lock()
+semaphore = Semaphore(8)
 
 def is_git_repo(dir):
     if os.path.isdir(dir + '/.git'):
@@ -60,7 +60,9 @@ class GitStatus(Thread):
 
     def run(self):
         try:
-            print self._git_status(self.dir, self.args)
+            result = self._git_status(self.dir, self.args)
+            if not result is None:
+                print result
         except:
             print self.red('ERROR processing repo ' + self.dir)
             raise
@@ -82,21 +84,23 @@ class GitStatus(Thread):
 
         title = ' ' + self.green(repo.active_branch.name) + ' ' + \
                 ' '.join(branch.name for branch in repo.branches if branch != repo.active_branch)
-        result += title + "\n"
+        result += title
         newline = False
 
         if args.pull:
             for remote in repo.remotes:
                 #remote.pull()
-                sp.Popen(['git', 'pull', remote.name], cwd=dir).wait()
+                proc = sp.Popen(['git', 'pull', remote.name], cwd=dir, stdout=sp.PIPE, stderr=sp.STDOUT)
+                for line in iter(proc.stdout.readline,''):
+                    result += "\n" + line
                 newline = True
         elif not args.cache:
             for remote in repo.remotes:
-                lock.acquire()
+                semaphore.acquire()
                 try:
                     remote.fetch()
                 finally:
-                    lock.release()
+                    semaphore.release()
 
         if args.push:
             for remote in repo.remotes:
@@ -110,18 +114,21 @@ class GitStatus(Thread):
         push_commits = sorted(commits_local.difference(commits_origin))
         pull_commits = sorted(commits_origin.difference(commits_local))
 
+        result_commits = ''
         if len(push_commits) > 0:
-            result += self.cyan("Commits to push (" + str(len(push_commits)) + "):") + "\n"
-            result += self.print_commits(push_commits)
-            newline = True
+            result_commits += self.cyan("Commits to push (" + str(len(push_commits)) + "):") + "\n"
+            result_commits += self.print_commits(push_commits)
 
         if len(pull_commits) > 0:
-            result += self.cyan("Commits to pull (" + str(len(pull_commits)) + "):") + "\n"
-            result += self.print_commits(pull_commits)
-            newline = True
+            result_commits += self.cyan("Commits to pull (" + str(len(pull_commits)) + "):") + "\n"
+            result_commits += self.print_commits(pull_commits)
+
+        if len(result_commits) > 0:
+            result += "\n"
+        result += result_commits
 
         if newline:
-            result += "\n"
+            result += ""
 
         return result
 
