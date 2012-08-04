@@ -23,25 +23,10 @@ from threading import Semaphore, Thread
 
 from git import Repo, InvalidGitRepositoryError
 
-from . import cli
+from . import cli, git
 
 git_threads = []
 semaphore = Semaphore(8)
-
-def is_git_repo(dir):
-    if os.path.isdir(dir + '/.git'):
-        return True
-    else:
-        return False
-
-
-def get_top_folder(dir):
-    if is_git_repo(dir):
-        return dir
-    elif dir == '/':
-        return ''
-    else:
-        return get_top_folder(os.path.dirname(dir))
 
 
 def check_dirs(dir, args):
@@ -170,7 +155,7 @@ def main():
     env_dir = os.environ['VIRTUAL_ENV'] + '/src/'
     self_dir = os.path.realpath('.')
 
-    top_dir = get_top_folder(self_dir)
+    top_dir = git.get_top_folder(self_dir)
 
     if args.regex:
         regex = re.compile(args.regex)
