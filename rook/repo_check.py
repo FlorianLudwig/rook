@@ -12,14 +12,18 @@ folder are used.
 
 
 """
+from __future__ import absolute_import
 
-from git import Repo, InvalidGitRepositoryError
 import os, sys
 import time
 import argparse
 import re
 import subprocess as sp
 from threading import Semaphore, Thread
+
+from git import Repo, InvalidGitRepositoryError
+
+from . import cli
 
 git_threads = []
 semaphore = Semaphore(8)
@@ -64,7 +68,7 @@ class GitStatus(Thread):
             if not result is None:
                 print result
         except:
-            print self.red('ERROR processing repo ' + self.dir)
+            print cli.red('ERROR processing repo ' + self.dir)
             raise
 
     def _git_status(self, dir, args):
@@ -80,9 +84,9 @@ class GitStatus(Thread):
             # show only dirty
             return
 
-        result += self.bold(name)
+        result += cli.bold(name)
 
-        title = ' ' + self.green(repo.active_branch.name) + ' ' + \
+        title = ' ' + cli.green(repo.active_branch.name) + ' ' + \
                 ' '.join(branch.name for branch in repo.branches if branch != repo.active_branch)
         result += title
         newline = False
@@ -116,11 +120,11 @@ class GitStatus(Thread):
 
         result_commits = ''
         if len(push_commits) > 0:
-            result_commits += self.cyan("Commits to push (" + str(len(push_commits)) + "):") + "\n"
+            result_commits += cli.cyan("Commits to push (" + str(len(push_commits)) + "):") + "\n"
             result_commits += self.print_commits(push_commits)
 
         if len(pull_commits) > 0:
-            result_commits += self.cyan("Commits to pull (" + str(len(pull_commits)) + "):") + "\n"
+            result_commits += cli.cyan("Commits to pull (" + str(len(pull_commits)) + "):") + "\n"
             result_commits += self.print_commits(pull_commits)
 
         if len(result_commits) > 0:
@@ -146,27 +150,11 @@ class GitStatus(Thread):
 
         return result
 
-    def color(self, t, c):
-        return chr(0x1b) + "["+str(c) + "m" + t + chr(0x1b) + "[0m"
 
-
-    def red(self, t):
-        return self.color(t, 31)
-
-
-    def cyan(self, t):
-        return self.color(t, 36)
-
-
-    def green(self, t):
-        return self.color(t, 32)
-
-
-    def bold(self, t):
-        return self.color(t, 1)
 
 def get_dirs_with_fullpath(dir):
     return sorted([os.path.join(dir, f) for f in os.listdir(dir) if os.path.isdir(os.path.join(dir, f))])
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
