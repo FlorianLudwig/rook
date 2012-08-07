@@ -85,15 +85,14 @@ class GitStatus(Thread):
         title = ' ' + self.green(repo.active_branch.name) + ' ' + \
                 ' '.join(branch.name for branch in repo.branches if branch != repo.active_branch)
         result += title
-        newline = False
 
         if args.pull:
             for remote in repo.remotes:
                 #remote.pull()
                 proc = sp.Popen(['git', 'pull', remote.name], cwd=dir, stdout=sp.PIPE, stderr=sp.STDOUT)
                 for line in iter(proc.stdout.readline,''):
-                    result += "\n" + line
-                newline = True
+                    result += "\n" + line.replace("\n","")
+                result += "\n"
         elif not args.cache:
             for remote in repo.remotes:
                 semaphore.acquire()
@@ -126,9 +125,6 @@ class GitStatus(Thread):
         if len(result_commits) > 0:
             result += "\n"
         result += result_commits
-
-        if newline:
-            result += ""
 
         return result
 
