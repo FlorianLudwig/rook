@@ -22,6 +22,7 @@ import subprocess as sp
 from threading import Semaphore, Thread
 
 from git import Repo, InvalidGitRepositoryError
+from git.exc import GitCommandError
 
 from . import cli, git
 
@@ -46,10 +47,17 @@ class GitStatus(Thread):
         Thread.__init__(self)
         self.dir = os.path.realpath(dir)
         self.args = args
+        self.result = ''
 
     def run(self):
         try:
-            self.result = self._git_status(self.dir, self.args)
+            self.result += self._git_status(self.dir, self.args)
+        except GitCommandError, e:
+            msg = e.command[0]
+            self.result += self.dir +'\n' + cli.red(msg) + '\n'
+            if 'The remote end hung up unexpectedly' in msg \
+             or 'Unable to look up' in msg:
+                 self.result += 'Network might be down, try -C\n'
         except:
             print cli.red('ERROR processing repo ' + self.dir)
             raise
@@ -59,13 +67,13 @@ class GitStatus(Thread):
         try:
             repo = Repo(dir)
         except InvalidGitRepositoryError:
-            return
+            return ''
         name = dir.split('/')[-1]
         if repo.is_dirty():
             name += '*'
         elif args.only_dirty:
             # show only dirty
-            return
+            return ''
 
         result += cli.bold(name)
 
