@@ -139,7 +139,7 @@ def main():
     parser.add_argument('-P', '--push', action="store_true", help='Push commits')
     parser.add_argument('-d', '--only-dirty', action="store_true", help='only dirty repositories')
     parser.add_argument('-C', '--cache', action="store_true", help="Do not hit the network, use local avaiable information only")
-    parser.add_argument('regex', metavar='REGEX', nargs='?',
+    parser.add_argument('regex', metavar='REGEX', nargs='*',
                         help='RegEx to search in your virtualenv')
     args = parser.parse_args()
 
@@ -152,12 +152,10 @@ def main():
     if len(top_dir) > 0:
         git_status(top_dir, args)
     else:
-        regex = None
-        if args.regex:
-            regex = re.compile(args.regex)
+        regex = [re.compile(r) for r in args.regex]
 
         for f in sorted(os.listdir(env_dir)):
-            if regex and not regex.search(f):
+            if regex and not any(r.search(f) for r in regex):
                 continue
             git_status(env_dir + f, args)
 
@@ -175,8 +173,8 @@ def main():
     sys.stdout.write('\r     \r')
     sys.stdout.flush()
 
-    available_space = cli.terminal_size()[1]
-    if available_space < result.count('\n'):
+    available_lines = cli.terminal_size()[1]
+    if available_lines < result.count('\n'):
         less = sp.Popen(['less', '-R'], stdin=sp.PIPE)
         less.stdin.write(result)
         less.stdin.close()
