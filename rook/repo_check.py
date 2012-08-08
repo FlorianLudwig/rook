@@ -14,7 +14,7 @@ folder are used.
 """
 from __future__ import absolute_import
 
-import os, sys
+import os
 import time
 import argparse
 import re
@@ -49,9 +49,7 @@ class GitStatus(Thread):
 
     def run(self):
         try:
-            result = self._git_status(self.dir, self.args)
-            if not result is None:
-                print result
+            self.result = self._git_status(self.dir, self.args)
         except:
             print cli.red('ERROR processing repo ' + self.dir)
             raise
@@ -78,7 +76,7 @@ class GitStatus(Thread):
         if args.pull:
             for remote in repo.remotes:
                 #remote.pull()
-                proc = sp.Popen(['git', 'pull', remote.name], cwd=dir, stdout=sp.PIPE, stderr=sp.STDOUT)
+                proc = sp.Popen(['git', '-c', 'color.ui=always', 'pull', remote.name], cwd=dir, stdout=sp.PIPE, stderr=sp.STDOUT)
                 for line in iter(proc.stdout.readline,''):
                     result += "\n" + line.replace("\n","")
                 result += "\n"
@@ -155,14 +153,19 @@ def main():
 
     if args.regex:
         regex = re.compile(args.regex)
-        for f in os.listdir(env_dir):
+        for f in sorted(os.listdir(env_dir)):
             if regex.search(f):
                 git_status(env_dir + f, args)
 
     elif len(top_dir) > 0:
-            git_status(top_dir, args)
+        git_status(top_dir, args)
     else:
         check_dirs(env_dir, args)
+
+    # wait for all threads to be done and print results -- in sorted order
+    for thread in git_threads:
+        thread.join()
+        print thread.result
 
 
 if __name__ == '__main__':
