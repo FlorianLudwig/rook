@@ -165,7 +165,8 @@ def main():
     # wait for all threads to be done and print results -- in sorted order
     for thread in git_threads:
         thread.join()
-        print thread.result
+        if thread.result:
+            print thread.result
 
 
 if __name__ == '__main__':
