@@ -15,6 +15,7 @@ folder are used.
 from __future__ import absolute_import
 
 import os
+import sys
 import time
 import argparse
 import re
@@ -147,6 +148,7 @@ def main():
 
     top_dir = git.get_top_folder(self_dir)
 
+    result = ''
     if len(top_dir) > 0:
         git_status(top_dir, args)
     else:
@@ -160,11 +162,27 @@ def main():
             git_status(env_dir + f, args)
 
     # wait for all threads to be done and print results -- in sorted order
+    done = 0.0
+    sys.stdout.write('  0%')
+    sys.stdout.flush()
     for thread in git_threads:
         thread.join()
+        done += 1
+        sys.stdout.write('\r{:3.0f}%'.format(done / len(git_threads) * 100))
+        sys.stdout.flush()
         if thread.result:
-            print thread.result
+            result += thread.result + '\n'
+    sys.stdout.write('\r     \r')
+    sys.stdout.flush()
 
+    available_space = cli.terminal_size()[1]
+    if available_space < result.count('\n'):
+        less = sp.Popen(['less', '-R'], stdin=sp.PIPE)
+        less.stdin.write(result)
+        less.stdin.close()
+        less.wait()
+    else:
+        print result
 
 if __name__ == '__main__':
     main()
