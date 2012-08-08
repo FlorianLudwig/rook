@@ -30,12 +30,6 @@ git_threads = []
 semaphore = Semaphore(8)
 
 
-def check_dirs(dir, args):
-    dirs = get_dirs_with_fullpath(dir)
-    for full_dir in dirs:
-        git_status(full_dir, args)
-
-
 def git_status(dir, args):
     thread = GitStatus(dir, args)
     git_threads.append(thread)
@@ -123,7 +117,6 @@ class GitStatus(Thread):
 
         return result
 
-
     def print_commits(self, commits):
         result = ""
         for i, commit in enumerate(commits):
@@ -136,11 +129,6 @@ class GitStatus(Thread):
             result += ' %s %s: %s' % (date, commit.author.email, msg) + "\n"
 
         return result
-
-
-
-def get_dirs_with_fullpath(dir):
-    return sorted([os.path.join(dir, f) for f in os.listdir(dir) if os.path.isdir(os.path.join(dir, f))])
 
 
 def main():
@@ -159,16 +147,17 @@ def main():
 
     top_dir = git.get_top_folder(self_dir)
 
-    if args.regex:
-        regex = re.compile(args.regex)
-        for f in sorted(os.listdir(env_dir)):
-            if regex.search(f):
-                git_status(env_dir + f, args)
-
-    elif len(top_dir) > 0:
+    if len(top_dir) > 0:
         git_status(top_dir, args)
     else:
-        check_dirs(env_dir, args)
+        regex = None
+        if args.regex:
+            regex = re.compile(args.regex)
+
+        for f in sorted(os.listdir(env_dir)):
+            if regex and not regex.search(f):
+                continue
+            git_status(env_dir + f, args)
 
     # wait for all threads to be done and print results -- in sorted order
     for thread in git_threads:
