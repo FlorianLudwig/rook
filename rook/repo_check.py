@@ -176,7 +176,7 @@ def main():
     available_lines = cli.terminal_size()[1]
     if available_lines < result.count('\n'):
         less = sp.Popen(['less', '-R'], stdin=sp.PIPE)
-        less.stdin.write(result)
+        less.stdin.write(result.encode('utf-8'))
         less.stdin.close()
         less.wait()
     else:
