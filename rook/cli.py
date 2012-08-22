@@ -23,6 +23,8 @@ def green(t):
 def bold(t):
     return color(t, 1)
 
+def orange(t):
+    return color(t, 33)
 
 def _ioctl_GWINSZ(fd):
     try:

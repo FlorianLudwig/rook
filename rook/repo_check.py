@@ -76,6 +76,9 @@ class GitStatus(Thread):
                 ' '.join(branch.name for branch in repo.branches if branch != repo.active_branch)
         result += title
 
+        len_untracked_files = len(repo.untracked_files)
+        if len_untracked_files > 0:
+            result += cli.orange( "(" + str(len_untracked_files) + " untracked files)")
         if args.pull:
             for remote in repo.remotes:
                 #remote.pull()
