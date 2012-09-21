@@ -7,10 +7,14 @@ class Node(object):
     def __init__(self, title, name=None, shape='ellipse'):
         self.title = title
         self.name = name if not name is None else 'Node%i' % id(self)
-        self.shape = shape
+        self.style = {'shape': shape}
 
     def __unicode__(self):
-        return u'    %s [label="%s", shape="%s"];\n' % (self.name, self.title, self.shape)
+        style = {}
+        style.update(self.style)
+        style['label'] = self.title
+        style = ','.join('{}="{}"'.format(k, v) for k, v in style.items())
+        return u'    %s [%s];\n' % (self.name, style)
 
 
 class Edge(object):
