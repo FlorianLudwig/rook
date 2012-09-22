@@ -74,18 +74,24 @@ class GitStatus(Thread):
 
         title = ' ' + cli.green(repo.active_branch.name) + ' ' + \
                 ' '.join(branch.name for branch in repo.branches if branch != repo.active_branch)
-        result += title
+        result += " " + title.strip()
 
         len_untracked_files = len(repo.untracked_files)
         if len_untracked_files > 0:
-            result += cli.orange( "(" + str(len_untracked_files) + " untracked files)")
+            result
+            result += cli.orange( " (" + str(len_untracked_files) + " untracked files)")
         if args.pull:
             for remote in repo.remotes:
                 #remote.pull()
                 proc = sp.Popen(['git', '-c', 'color.ui=always', 'pull', remote.name], cwd=dir, stdout=sp.PIPE, stderr=sp.STDOUT)
                 for line in iter(proc.stdout.readline,''):
-                    result += "\n" + line.replace("\n","")
-                result += "\n"
+                    if(line.strip() == 'Already up-to-date.'):
+                        result += ' ' + cli.yellow('up-to-data')
+                    else:
+                        result += "\n" + line.strip()
+                if(remote != repo.remotes[-1]):
+                    result += "\n"
+
         elif not args.cache:
             for remote in repo.remotes:
                 semaphore.acquire()
@@ -98,10 +104,9 @@ class GitStatus(Thread):
             for remote in repo.remotes:
                 #remote.push()
                 sp.Popen(['git', 'push', remote.name], cwd=dir).wait()
-                newline = True
 
-        commits_origin = set(repo.iter_commits('origin/master'))
-        commits_local = set(repo.iter_commits())
+        commits_origin = set(repo.iter_commits("origin/" + repo.active_branch.name))
+        commits_local = set(repo.iter_commits(repo.active_branch.name))
 
         push_commits = sorted(commits_local.difference(commits_origin))
         pull_commits = sorted(commits_origin.difference(commits_local))
@@ -128,9 +133,11 @@ class GitStatus(Thread):
                 break
             msg = commit.message.strip()
             if '\n' in msg:
-                msg = msg.split("\n")[0] + u'…'
+                msg = msg.split("\n")[0] + '…'
             date = time.strftime("%Y-%m-%d %H:%M", time.localtime(commit.committed_date))
-            result += ' %s %s: %s' % (date, commit.author.email, msg) + "\n"
+            result += ' %s %s: %s' % (date, commit.author.email, msg)
+            if i < 3:
+                result += '\n'
 
         return result
 
@@ -172,18 +179,18 @@ def main():
         sys.stdout.write('\r{:3.0f}%'.format(done / len(git_threads) * 100))
         sys.stdout.flush()
         if thread.result:
-            result += thread.result + '\n'
+            result += thread.result.encode('utf-8', errors='replace') + '\n'
     sys.stdout.write('\r     \r')
     sys.stdout.flush()
 
     available_lines = cli.terminal_size()[1]
     if available_lines < result.count('\n'):
         less = sp.Popen(['less', '-R'], stdin=sp.PIPE)
-        less.stdin.write(result.encode('utf-8'))
+        less.stdin.write(result.encode('utf-8', errors='replace'))
         less.stdin.close()
         less.wait()
     else:
-        print result
+        print result.strip()
 
 if __name__ == '__main__':
     main()
