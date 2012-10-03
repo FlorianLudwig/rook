@@ -101,11 +101,11 @@ error_parser = ErrorParser()
 
 class CompileShell(object):
     """Wrapper around fcsh - the Adobe Flex SDK Compiler Shell"""
-    def __init__(self, path):
+    def __init__(self, source_path, flexsdk_path):
         self.targets = {}
         self.log = ''
-        fcsh = '%s/bin/fcsh' % config.FLEX4_PATH
-        cmd = 'cd %s; LANG=C %s' % (path, fcsh)
+        fcsh = '%s/bin/fcsh' % flexsdk_path
+        cmd = 'cd %s; LANG=C %s' % (source_path, fcsh)
         if not os.path.exists(fcsh):
             print 'flex install not correct.'
             print 'check config.py - FLEX4_PATH'
@@ -125,11 +125,7 @@ class CompileShell(object):
             fl = fcntl.fcntl(fd, fcntl.F_GETFL)
             # set nonblocking
             fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
-        fcsh_header = self.read()
-
-        if not FLEX_VERSION in fcsh_header[0]:
-            print 'Wrong flash version'
-            print_download()
+        self.read()
 
     def read(self):
         stdout = ''
@@ -152,6 +148,7 @@ class CompileShell(object):
         return stdout, stderr
 
     def build(self, cmd, clear):
+        print 'build', cmd
         if clear:
             self.fcsh.stdin.write(cmd + '\n')
             stdout, stderr = self.read()
@@ -186,33 +183,51 @@ class CompileShell(object):
                 self.targets[cmd] = t_id
 
                 # GC
-#                if len(self.targets) > 10:
-#                    for t in self.targets.keys()[10:]:
-#                        self.fcsh.stdin.write('clear %s\n' % self.targets[t])
-#                        print 'removing %s from cache' % t
-#                        del self.targets[t]
-
-                return error_parser.parse(stderr, stdout)
+                #if len(self.targets) > 10:
+                #    for t in self.targets.keys()[10:]:
+                #        self.fcsh.stdin.write('clear %s\n' % self.targets[t])
+                #        print 'removing %s from cache' % t
+                #        del self.targets[t]
+                return CompileShellJob(self, cmd, t_id,
+                                       error_parser.parse(stderr, stdout))
 
             else:
                 self.fcsh.stdin.write('compile %s\n' % self.targets[cmd])
                 stdout, stderr = self.read()
                 if '-d' in sys.argv:
                     print 'fcsh:'
-                    print self.log
+                    print self.logg
                     print
                 return error_parser.parse(stderr, stdout)
 
 
+class CompileShellJob(object):
+    def __init__(self, shell, cmd, job_id, last_error):
+        self.shell = shell
+        self.cmd = cmd
+        self.job_id = job_id
+        self.last_error = last_error
+
+    def __del__(self):
+        self.shell.fcsh.stdin.write('clear %s\n' % self.job_id)
+        self.shell.read()
+        del self.shell.targets[self.cmd]
+
+
 class SDK(object):
     """Represents a SDK in a specific version"""
-    def __init__(self, version):
+    def __init__(self, version, source_path=None, fcsh=False):
+        if source_path is None:
+            source_path = '.'
+        source_path = os.path.abspath(source_path)
         if not version in CONFIG:
             msg = 'Version "%s" not configured. Avialable: %s'
             msg = msg % (version, ', '.join(repr(v) for v in CONFIG))
             raise AttributeError(msg)
         self.path = CONFIG[version]
+        self.source_path = source_path
         check_install(self.path)
+        self.fcsh = CompileShell(source_path, self.path) if fcsh else False
 
     def swc(self, name, src='src', requires=[], external=None, output=None, args=None):
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
@@ -227,7 +242,7 @@ class SDK(object):
     def swf(self, name, target, src='src', requires=[], external=None, output=None, args=None):
         if not output:
             output = 'bin/' + name + '.swf'
-        self.run('mxmlc', src=src, requires=requires, 
+        self.run('mxmlc', src=src, requires=requires,
                  external=external,
                  output=output,
                  target=target,
@@ -251,7 +266,10 @@ class SDK(object):
                    '-output', output,
                    '-optimize'])
         print 'compiling', ' '.join([self.path + '/bin/' + cmd] + list(args))
-        proc = sp.Popen([self.path + '/bin/' + cmd] + list(args))
-        proc.wait()
+        if self.fcsh:
+            print self.fcsh.build(cmd + ' ' + ' '.join(args), False)
+        else:
+            proc = sp.Popen([self.path + '/bin/' + cmd] + list(args))
+            proc.wait()
 
 

@@ -247,3 +247,10 @@ def setup():
     tornado.autoreload.add_reload_hook(clear_notification)
     _setup = True
 
+
+
+def main():
+    print 'rmake'
+    if os.path.exists('build.py'):
+        print __import__('build')
+
