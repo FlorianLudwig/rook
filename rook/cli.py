@@ -5,7 +5,7 @@ import struct
 
 
 def color(t, c):
-    return chr(0x1b) + "["+str(c) + "m" + t + chr(0x1b) + "[0m"
+    return u'\x1b[' + unicode(c) + u'm' + unicode(t) + u'\x1b[0m'
 
 def red(t):
     return color(t, 31)

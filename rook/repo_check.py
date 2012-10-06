@@ -42,55 +42,55 @@ class GitStatus(Thread):
         Thread.__init__(self)
         self.dir = os.path.realpath(dir)
         self.args = args
-        self.result = ''
+        self.result = u''
 
     def run(self):
         try:
             self.result += self._git_status(self.dir, self.args)
         except GitCommandError, e:
             msg = e.command[0]
-            self.result += self.dir +'\n' + cli.red(msg) + '\n'
+            self.result += self.dir +u'\n' + cli.red(msg) + u'\n'
             if 'The remote end hung up unexpectedly' in msg \
              or 'Unable to look up' in msg:
-                 self.result += 'Network might be down, try -C\n'
+                 self.result += u'Network might be down, try -C\n'
         except:
-            print cli.red('ERROR processing repo ' + self.dir)
+            print cli.red(u'ERROR processing repo ' + self.dir)
             raise
 
     def _git_status(self, dir, args):
-        result = ""
+        result = u''
         try:
             repo = Repo(dir)
         except InvalidGitRepositoryError:
-            return ''
+            return u''
         name = dir.split('/')[-1]
         if repo.is_dirty():
-            name += '*'
+            name += u'*'
         elif args.only_dirty:
             # show only dirty
-            return ''
+            return u''
 
         result += cli.bold(name)
 
-        title = ' ' + cli.green(repo.active_branch.name) + ' ' + \
-                ' '.join(branch.name for branch in repo.branches if branch != repo.active_branch)
-        result += " " + title.strip()
+        title = u' ' + cli.green(repo.active_branch.name) + ' ' + \
+                u' '.join(branch.name for branch in repo.branches if branch != repo.active_branch)
+        result += u' ' + title.strip()
 
         len_untracked_files = len(repo.untracked_files)
         if len_untracked_files > 0:
             result
-            result += cli.orange( " (" + str(len_untracked_files) + " untracked files)")
+            result += cli.orange( u' (' + unicode(len_untracked_files) + u' untracked files)')
         if args.pull:
             for remote in repo.remotes:
                 #remote.pull()
                 proc = sp.Popen(['git', '-c', 'color.ui=always', 'pull', remote.name], cwd=dir, stdout=sp.PIPE, stderr=sp.STDOUT)
-                for line in iter(proc.stdout.readline,''):
+                for line in iter(proc.stdout.readline, ''):
                     if(line.strip() == 'Already up-to-date.'):
-                        result += ' ' + cli.yellow('up-to-data')
+                        result += u' ' + cli.yellow('up-to-data')
                     else:
-                        result += "\n" + line.strip()
+                        result += u'\n' + line.decode('utf-8').strip()
                 if(remote != repo.remotes[-1]):
-                    result += "\n"
+                    result += u'\n'
 
         elif not args.cache:
             for remote in repo.remotes:
@@ -99,7 +99,6 @@ class GitStatus(Thread):
                     remote.fetch()
                 finally:
                     semaphore.release()
-
         if args.push:
             for remote in repo.remotes:
                 #remote.push()
@@ -111,33 +110,35 @@ class GitStatus(Thread):
         push_commits = sorted(commits_local.difference(commits_origin))
         pull_commits = sorted(commits_origin.difference(commits_local))
 
-        result_commits = ''
+        result_commits = u''
         if len(push_commits) > 0:
-            result_commits += cli.cyan("Commits to push (" + str(len(push_commits)) + "):") + "\n"
+            result_commits += cli.cyan(u'Commits to push ({0}):'.format(len(push_commits))) + u'\n'
             result_commits += self.print_commits(push_commits)
 
         if len(pull_commits) > 0:
-            result_commits += cli.cyan("Commits to pull (" + str(len(pull_commits)) + "):") + "\n"
+            result_commits += cli.cyan(u'Commits to pull ({0}):'.format(len(push_commits))) + u'\n'
             result_commits += self.print_commits(pull_commits)
 
         if len(result_commits) > 0:
-            result += "\n"
+            result += u'\n'
         result += result_commits
+        assert(isinstance(result, unicode))
 
         return result
 
     def print_commits(self, commits):
-        result = ""
+        result = u''
         for i, commit in enumerate(commits):
             if i > 3:
                 break
             msg = commit.message.strip()
-            if '\n' in msg:
-                msg = msg.split("\n")[0] + '…'
-            date = time.strftime("%Y-%m-%d %H:%M", time.localtime(commit.committed_date))
-            result += ' %s %s: %s' % (date, commit.author.email, msg)
+            assert isinstance(msg, unicode)
+            if u'\n' in msg:
+                msg = msg.split(u'\n')[0] + u'…'
+            date = time.strftime(u'%Y-%m-%d %H:%M', time.localtime(commit.committed_date))
+            result += u' %s %s: %s' % (date, commit.author.email, msg)
             if i < 3:
-                result += '\n'
+                result += u'\n'
 
         return result
 
@@ -158,7 +159,7 @@ def main():
 
     top_dir = git.get_top_folder(self_dir)
 
-    result = ''
+    result = u''
     if len(top_dir) > 0:
         git_status(top_dir, args)
     else:
@@ -179,12 +180,14 @@ def main():
         sys.stdout.write('\r{:3.0f}%'.format(done / len(git_threads) * 100))
         sys.stdout.flush()
         if thread.result:
-            result += thread.result.encode('utf-8', errors='replace') + '\n'
-    sys.stdout.write('\r     \r')
+            assert isinstance(result, unicode), 'result: ' + repr(result)
+            result += thread.result + u'\n'
+    sys.stdout.write(u'\r     \r')
     sys.stdout.flush()
 
     available_lines = cli.terminal_size()[1]
     if available_lines < result.count('\n'):
+        
         less = sp.Popen(['less', '-R'], stdin=sp.PIPE)
         less.stdin.write(result.encode('utf-8', errors='replace'))
         less.stdin.close()
