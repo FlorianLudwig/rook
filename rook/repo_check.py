@@ -112,11 +112,11 @@ class GitStatus(Thread):
 
         result_commits = u''
         if len(push_commits) > 0:
-            result_commits += cli.cyan(u'Commits to push ({0}):'.format(len(push_commits))) + u'\n'
+            result_commits += cli.cyan(u'Commits to push ({0}):'.format(str(push_commits))) + u'\n'
             result_commits += self.print_commits(push_commits)
 
         if len(pull_commits) > 0:
-            result_commits += cli.cyan(u'Commits to pull ({0}):'.format(len(push_commits))) + u'\n'
+            result_commits += cli.cyan(u'Commits to pull ({0}):'.format(len(pull_commits))) + u'\n'
             result_commits += self.print_commits(pull_commits)
 
         if len(result_commits) > 0:
