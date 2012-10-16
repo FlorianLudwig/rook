@@ -16,6 +16,8 @@ from __future__ import absolute_import
 
 import os
 import sys
+import shutil
+import stat
 import time
 import argparse
 import re
@@ -29,6 +31,21 @@ from . import cli, git
 
 git_threads = []
 semaphore = Semaphore(8)
+
+GITHOOK = """# GIT HOOK CREATED BY rcheck
+
+GIT=`dirname $0`
+
+if [ -e $0.real ]; then
+  $0.real || exit $?
+fi
+
+REPO_HOOK="$GIT/../../.githooks/`basename $0`"
+if [ -e "$REPO_HOOK" ]; then
+ $REPO_HOOK || exit $?
+fi"""
+RX = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH \
+     | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
 
 
 def git_status(dir, args):
@@ -58,6 +75,21 @@ class GitStatus(Thread):
             raise
 
     def _git_status(self, dir, args):
+        # we abuse rcheck to make sure everyone got his git repository
+        # setup "properly". Lets sneak in some git hooks.
+        githooks = dir + '/.githooks'
+        if os.path.exists(githooks):
+            # ok there are repository hooks, lets make sure they are used
+            for hook in os.listdir(githooks):
+                rcheck_hook = dir + '/.git/hooks/' + hook
+                if os.path.exists(rcheck_hook):
+                    if open(rcheck_hook).readline() != '# GIT HOOK CREATED BY rcheck\n':
+                        shutil.move(rcheck_hook, rcheck_hook + '.real')
+                    else:
+                        continue
+                open(rcheck_hook, 'w').write(GITHOOK)
+                os.chmod(rcheck_hook, RX)
+
         result = u''
         try:
             repo = Repo(dir)
