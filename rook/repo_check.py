@@ -65,7 +65,7 @@ class GitStatus(Thread):
             return u''
         name = dir.split('/')[-1]
         if repo.is_dirty():
-            name += u'*'
+            name += cli.red(u'*')
         elif args.only_dirty:
             # show only dirty
             return u''
@@ -187,7 +187,7 @@ def main():
 
     available_lines = cli.terminal_size()[1]
     if available_lines < result.count('\n'):
-        
+
         less = sp.Popen(['less', '-R'], stdin=sp.PIPE)
         less.stdin.write(result.encode('utf-8', errors='replace'))
         less.stdin.close()
