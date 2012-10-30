@@ -229,7 +229,8 @@ class SDK(object):
         check_install(self.path)
         self.fcsh = CompileShell(source_path, self.path) if fcsh else False
 
-    def swc(self, name, src='src', requires=[], external=None, output=None, args=None):
+    def swc(self, name, src='src', requires=[], external=None, output=None, 
+            config=None, args=None, config_append=None):
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
         if not args:
             args = []
@@ -237,19 +238,20 @@ class SDK(object):
         if not output:
             output = lib_dir + name + '.swc'
         self.run('compc', src=src, requires=requires, external=external,
-                 output=output, args=args)
+                 output=output, args=args, config=config, 
+                 config_append=config_append)
 
-    def swf(self, name, target, src='src', requires=[], external=None, output=None, args=None):
+    def swf(self, name, target, src='src', requires=[], external=None, 
+            output=None, args=None, config=None, config_append=None):
         if not output:
             output = 'bin/' + name + '.swf'
-        self.run('mxmlc', src=src, requires=requires,
-                 external=external,
-                 output=output,
-                 target=target,
-                 args=args)
+        self.run('mxmlc', src=src, requires=requires, external=external, 
+                 output=output, target=target, args=args, config=config,
+                 config_append=config_append)
 
     def run(self, cmd, src='src', requires=[], external=None,
-            output=None, target=None, args=None):
+            output=None, target=None, args=None, config=None,
+            config_append=None):
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
         if not os.path.exists(lib_dir):
             os.makedirs(lib_dir)
@@ -262,9 +264,22 @@ class SDK(object):
             args.extend(['-compiler.include-libraries+=%s%s.swc' % (lib_dir, req)])
         if target:
             args.insert(0, target)
+        # override default config from flex framework
+        if config:
+            if not os.path.exists(config):
+                raise AttributeError('file not found "' + config + '"')
+            args.extend(['-load-config=%s' % config])
+        # append parameter to config
+        if config_append:
+            if isinstance(config_append, (str, unicode)):
+                config_append = [config_append]
+            for cfg in config_append:
+                if not os.path.exists(cfg):
+                    raise AttributeError('file not found "' + cfg + '"')
+                args.extend(['-load-config+=%s' % cfg])
         args.extend(['-source-path', src,
-                   '-output', output,
-                   '-optimize'])
+                     '-output', output,
+                     '-optimize'])
         print 'compiling', ' '.join([self.path + '/bin/' + cmd] + list(args))
         if self.fcsh:
             print self.fcsh.build(cmd + ' ' + ' '.join(args), False)
