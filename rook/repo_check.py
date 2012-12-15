@@ -104,8 +104,15 @@ class GitStatus(Thread):
 
         result += cli.bold(name)
 
-        title = u' ' + cli.green(repo.active_branch.name) + ' ' + \
-                u' '.join(branch.name for branch in repo.branches if branch != repo.active_branch)
+        is_detached = False
+        try:
+            active_branch = repo.active_branch
+        except TypeError:
+            is_detached = True
+            active_branch = '[detached]'
+
+        title = u' ' + cli.green(active_branch) + ' ' + \
+                u' '.join(branch.name for branch in repo.branches if branch != active_branch)
         result += u' ' + title.strip()
 
         len_untracked_files = len(repo.untracked_files)
@@ -131,6 +138,10 @@ class GitStatus(Thread):
                     remote.fetch()
                 finally:
                     semaphore.release()
+
+        if is_detached:
+            return result
+
         if args.push:
             for remote in repo.remotes:
                 #remote.push()
