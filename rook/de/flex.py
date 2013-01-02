@@ -43,8 +43,8 @@ load_config()
 def print_download():
     print
     print 'Needing Flex SDK Version ' + FLEX_VERSION
-    print 'Direct Download: http://fpdownload.adobe.com/pub/flex/sdk/builds/flex4.5/flex_sdk_4.5.0.20967.zip'
-    print 'FlexDownloads: http://opensource.adobe.com/wiki/display/flexsdk/Download+Flex+4.5'
+    print 'Direct Download: http://download.macromedia.com/pub/flex/sdk/flex_sdk_4.6.zip (build 23201)'
+    print 'FlexDownloads: http://www.adobe.com/devnet/flex/flex-sdk-download-all.html'
     sys.exit(1)
 
 
