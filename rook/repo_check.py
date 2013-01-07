@@ -117,8 +117,21 @@ class GitStatus(Thread):
 
         len_untracked_files = len(repo.untracked_files)
         if len_untracked_files > 0:
-            result
             result += cli.orange( u' (' + unicode(len_untracked_files) + u' untracked files)')
+
+        if args.sha1:
+            print repo.head.reference.message
+            """
+            for commit in repo.iter_trees():
+                print "BBB"
+                print args.sha1[0], 'w', commit.hexsha
+                if args.sha1[0] == commit.hexsha:
+                    result += cli.green("\nFOUND: {}, {}".format(self.format_date(commit.authored_date), commit.committer))
+                    return result
+                result += cli.red("\nNOT FOUND")
+                return result
+            """
+            return "A"
         if args.pull:
             for remote in repo.remotes:
                 #remote.pull()
@@ -178,13 +191,15 @@ class GitStatus(Thread):
             assert isinstance(msg, unicode)
             if u'\n' in msg:
                 msg = msg.split(u'\n')[0] + u'…'
-            date = time.strftime(u'%Y-%m-%d %H:%M', time.localtime(commit.committed_date))
+            date = self.format_date(commit.committed_date)
             result += u' %s %s: %s' % (date, commit.author.email, msg)
             if i < 3:
                 result += u'\n'
 
         return result
 
+    def format_date(self, date):
+        return time.strftime(u'%Y-%m-%d %H:%M', time.localtime(date))
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
@@ -193,6 +208,7 @@ def main():
     parser.add_argument('-P', '--push', action="store_true", help='Push commits')
     parser.add_argument('-d', '--only-dirty', action="store_true", help='only dirty repositories')
     parser.add_argument('-C', '--cache', action="store_true", help="Do not hit the network, use local avaiable information only")
+    parser.add_argument('-s', '--sha1', nargs='*', help='Search for sha1')
     parser.add_argument('regex', metavar='REGEX', nargs='*',
                         help='RegEx to search in your virtualenv')
     args = parser.parse_args()
