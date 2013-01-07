@@ -1,1 +1,1 @@
--e git+git@leijuna.de:rueckenwind#egg=rueckenwind
+-e git+git@git.dev.rook:lib/rueckenwind.git#egg=rueckenwind
