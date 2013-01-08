@@ -148,7 +148,6 @@ class CompileShell(object):
         return stdout, stderr
 
     def build(self, cmd, clear):
-        print 'build', cmd
         if clear:
             self.fcsh.stdin.write(cmd + '\n')
             stdout, stderr = self.read()
@@ -190,7 +189,6 @@ class CompileShell(object):
                 #        del self.targets[t]
                 return CompileShellJob(self, cmd, t_id,
                                        error_parser.parse(stderr, stdout))
-
             else:
                 self.fcsh.stdin.write('compile %s\n' % self.targets[cmd])
                 stdout, stderr = self.read()
@@ -213,6 +211,14 @@ class CompileShellJob(object):
         self.shell.read()
         del self.shell.targets[self.cmd]
 
+    def __nonzero__(self):
+        # we want to write code like:
+        # if sdk.swc(...):
+        #     ...
+        # so a CompileShellJob evaluates to True if it successed and False
+        # if there were any compile errors
+        return bool(self.last_error)
+
 
 class SDK(object):
     """Represents a SDK in a specific version"""
@@ -229,7 +235,7 @@ class SDK(object):
         check_install(self.path)
         self.fcsh = CompileShell(source_path, self.path) if fcsh else False
 
-    def swc(self, name, src='src', requires=[], external=None, output=None, 
+    def swc(self, name, src='src', requires=[], external=None, output=None,
             config=None, args=None, config_append=None):
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
         if not args:
@@ -237,17 +243,17 @@ class SDK(object):
         args += ['-include-sources', src]
         if not output:
             output = lib_dir + name + '.swc'
-        self.run('compc', src=src, requires=requires, external=external,
-                 output=output, args=args, config=config, 
-                 config_append=config_append)
+        return self.run('compc', src=src, requires=requires, external=external,
+                        output=output, args=args, config=config,
+                        config_append=config_append)
 
-    def swf(self, name, target, src='src', requires=[], external=None, 
+    def swf(self, name, target, src='src', requires=[], external=None,
             output=None, args=None, config=None, config_append=None):
         if not output:
             output = 'bin/' + name + '.swf'
-        self.run('mxmlc', src=src, requires=requires, external=external, 
-                 output=output, target=target, args=args, config=config,
-                 config_append=config_append)
+        return self.run('mxmlc', src=src, requires=requires, external=external,
+                        output=output, target=target, args=args, config=config,
+                        config_append=config_append)
 
     def run(self, cmd, src='src', requires=[], external=None,
             output=None, target=None, args=None, config=None,
@@ -282,9 +288,9 @@ class SDK(object):
                      '-optimize'])
         print 'compiling', ' '.join([self.path + '/bin/' + cmd] + list(args))
         if self.fcsh:
-            print self.fcsh.build(cmd + ' ' + ' '.join(args), False)
+            return self.fcsh.build(cmd + ' ' + ' '.join(args), False)
         else:
             proc = sp.Popen([self.path + '/bin/' + cmd] + list(args))
-            proc.wait()
+            return proc.wait() == 0
 
 
