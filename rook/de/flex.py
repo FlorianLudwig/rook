@@ -265,7 +265,12 @@ class SDK(object):
             args = []
         if external:
             for ext in external:
-                args.extend(['-external-library-path+=%s%s.swc' % (lib_dir, ext)])
+                f = self.source_path+'/lib/'+ext+'.swc'
+                if not os.path.exists(f):
+                    f = lib_dir+ext+'.swc'
+                    if not os.path.exists(f):
+                        raise Exception('lib %s.swc not found' % ext)
+                args.extend(['-external-library-path+=%s' % f])
         for req in requires:
             args.extend(['-compiler.include-libraries+=%s%s.swc' % (lib_dir, req)])
         if target:
