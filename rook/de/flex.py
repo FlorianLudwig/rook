@@ -276,10 +276,10 @@ class SDK(object):
             args = []
         if external:
             for ext in external:
-                args.extend(['-external-library-path+=%s' % self.lib_dir(ext)])
+                args.extend(['-external-library-path+=%s' % self.lib_path(ext)])
         if requires:
             for req in requires:
-                args.extend(['-compiler.include-libraries+=%s' % self.lib_dir(req)])
+                args.extend(['-compiler.include-libraries+=%s' % self.lib_path(req)])
         if target:
             args.insert(0, target)
         # override default config from flex framework
