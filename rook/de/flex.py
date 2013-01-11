@@ -235,7 +235,7 @@ class SDK(object):
         check_install(self.path)
         self.fcsh = CompileShell(source_path, self.path) if fcsh else False
 
-    def swc(self, name, src='src', requires=[], external=None, output=None,
+    def swc(self, name, src='src', requires=None, external=None, output=None,
             config=None, args=None, config_append=None):
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
         if not args:
@@ -247,7 +247,7 @@ class SDK(object):
                         output=output, args=args, config=config,
                         config_append=config_append)
 
-    def swf(self, name, target, src='src', requires=[], external=None,
+    def swf(self, name, target, src='src', requires=None, external=None,
             output=None, args=None, config=None, config_append=None):
         if not output:
             output = 'bin/' + name + '.swf'
@@ -255,7 +255,19 @@ class SDK(object):
                         output=output, target=target, args=args, config=config,
                         config_append=config_append)
 
-    def run(self, cmd, src='src', requires=[], external=None,
+    def lib_path(self, name):
+        '''get file path from library name (take a look in local lib first
+           and if it is not there in the global dir)'''
+        lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
+        f = self.source_path+'/lib/'+name+'.swc'
+        if os.path.exists(f):
+            return f
+        f = lib_dir+name+'.swc'
+        if os.path.exists(f):
+            return f
+        raise Exception('lib %s.swc not found' % ext)
+
+    def run(self, cmd, src='src', requires=None, external=None,
             output=None, target=None, args=None, config=None,
             config_append=None):
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
@@ -265,14 +277,10 @@ class SDK(object):
             args = []
         if external:
             for ext in external:
-                f = self.source_path+'/lib/'+ext+'.swc'
-                if not os.path.exists(f):
-                    f = lib_dir+ext+'.swc'
-                    if not os.path.exists(f):
-                        raise Exception('lib %s.swc not found' % ext)
-                args.extend(['-external-library-path+=%s' % f])
-        for req in requires:
-            args.extend(['-compiler.include-libraries+=%s%s.swc' % (lib_dir, req)])
+                args.extend(['-external-library-path+=%s' % self.lib_path(ext)])
+        if requires:
+            for req in requires:
+                args.extend(['-compiler.include-libraries+=%s' % self.lib_path(req)])
         if target:
             args.insert(0, target)
         # override default config from flex framework
