@@ -16,14 +16,18 @@ if Notify is None or not Notify.init("Leijuna Build Deamon"):
     Notify = None
 
 
+
 def show_notification(msg, details='', urgent=False):
-    global last_notification
-    clear_notification()
-    n = Notify.Notification.new(msg, details, None)
-    n.set_hint("transient", GLib.Variant.new_boolean(True))
-    n.set_urgency(Notify.Urgency.CRITICAL if urgent else Notify.Urgency.NORMAL)
-    n.show()
-    last_notification = n
+    try:
+        global last_notification
+        clear_notification()
+        n = Notify.Notification.new(msg, details, None)
+        n.set_hint("transient", GLib.Variant.new_boolean(True))
+        n.set_urgency(Notify.Urgency.CRITICAL if urgent else Notify.Urgency.NORMAL)
+        n.show()
+        last_notification = n
+    except:
+        print 'Could not display notification', msg
 
 
 def clear_notification():
