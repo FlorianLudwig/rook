@@ -265,7 +265,7 @@ class SDK(object):
         f = lib_dir+name+'.swc'
         if os.path.exists(f):
             return f
-        raise Exception('lib %s.swc not found' % ext)
+        raise Exception('lib %s.swc not found' % name)
 
     def run(self, cmd, src='src', requires=None, external=None,
             output=None, target=None, args=None, config=None,
