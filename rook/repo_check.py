@@ -24,7 +24,7 @@ import re
 import subprocess as sp
 from threading import Semaphore, Thread
 
-from git import Repo, InvalidGitRepositoryError
+from git import Repo, Git, InvalidGitRepositoryError
 from git.exc import GitCommandError
 
 from . import cli, git
@@ -120,18 +120,15 @@ class GitStatus(Thread):
             result += cli.orange( u' (' + unicode(len_untracked_files) + u' untracked files)')
 
         if args.sha1:
-            print repo.head.reference.message
-            """
-            for commit in repo.iter_trees():
-                print "BBB"
-                print args.sha1[0], 'w', commit.hexsha
-                if args.sha1[0] == commit.hexsha:
-                    result += cli.green("\nFOUND: {}, {}".format(self.format_date(commit.authored_date), commit.committer))
-                    return result
-                result += cli.red("\nNOT FOUND")
-                return result
-            """
-            return "A"
+            g = Git(dir)
+            hexshas = g.log('--pretty=%H').split('\n')
+            if not args.sha1[0] in hexshas:
+                return ""
+            commit = repo.commit(args.sha1[0])
+            result += cli.green("\nFOUND:\n")
+            result += self.print_commits([commit])
+            return result
+
         if args.pull:
             for remote in repo.remotes:
                 #remote.pull()
