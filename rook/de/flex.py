@@ -258,10 +258,11 @@ class SDK(object):
     def lib_path(self, name):
         '''get file path from library name (take a look in local lib first
            and if it is not there in the global dir)'''
-        f = self.source_path+'/lib/'+ext+'.swc'
+        lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
+        f = self.source_path+'/lib/'+name+'.swc'
         if os.path.exists(f):
             return f
-        f = lib_dir+ext+'.swc'
+        f = lib_dir+name+'.swc'
         if os.path.exists(f):
             return f
         raise Exception('lib %s.swc not found' % ext)
