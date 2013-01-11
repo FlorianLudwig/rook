@@ -121,7 +121,7 @@ class GitStatus(Thread):
 
         if args.sha1:
             g = Git(dir)
-            hexshas = g.log('--pretty=%H').split('\n')
+            hexshas = g.log('--pretty=%H', '--all').split('\n')
             if not args.sha1[0] in hexshas:
                 return ""
             commit = repo.commit(args.sha1[0])
