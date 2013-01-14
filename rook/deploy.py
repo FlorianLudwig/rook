@@ -7,10 +7,13 @@ import argparse
 import re
 import subprocess as sp
 import webbrowser
+import logging
 
 from git import Repo, InvalidGitRepositoryError
 
-from . import cli, git
+# from . import cli, git
+
+LOG = logging.getLogger(__name__)
 
 
 def main():
