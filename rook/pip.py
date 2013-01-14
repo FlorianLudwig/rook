@@ -67,7 +67,7 @@ def ensure_checkout(url, name):
 
 
 def main():
-    logging.basicConfig()
+    logging.basicConfig(level=logging.INFO)
     done = []
     #requirements_file_add = ''
     #for arg in sys.argv[1:]:
