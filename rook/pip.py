@@ -38,7 +38,7 @@ def recursive_requirements(repo_path, requirements_file, done=None):
                 recursive_requirements(sub_repo_path, requirements_file, done)
                 requirements_file.write(os.path.realpath(sub_repo_path) + '\n')
             else:
-                requirements_file.write(requirement + '\n')
+                requirements_file.write('-e ' + requirement + '\n')
 
 
 def ensure_checkout(url, name):
@@ -82,7 +82,7 @@ def main():
 
     requirements_file = tempfile.NamedTemporaryFile()
     recursive_requirements(repo_path, requirements_file, done)
-    requirements_file.write(repo_path + '\n')
+    requirements_file.write('-e ' + repo_path + '\n')
     #requirements_file.write(requirements_file_add)
     requirements_file.flush()
     LOG.info('-- Collected requirements file --')
