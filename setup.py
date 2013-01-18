@@ -9,7 +9,8 @@ setup(
             'rookd = rook.de:main',
             'rmake = rook.build:main',
             'rcheck = rook.repo_check:main',
-            'rdeploy = rook.deploy:main'
+            'rdeploy = rook.deploy:main',
+            'rpip = rook.pip:main'
         ],
     },
 )
