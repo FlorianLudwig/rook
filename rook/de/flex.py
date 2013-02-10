@@ -250,9 +250,12 @@ class SDK(object):
 
     def swc(self, name, **kwargs):
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
-        if not kwargs['args']:
+        if not 'args' in kwargs:
             kwargs['args'] = []
-        kwargs['args'] += ['-include-sources', src]
+        if 'src' in kwargs:
+            kwargs['args'] += ['-include-sources', kwargs['src']]
+        else:
+            kwargs['args'] += ['-include-sources', 'src']
         if not 'output' in kwargs:
             kwargs['output'] = lib_dir + name + '.swc'
         cmd, args = self.create_args(cmd='compc', **kwargs)
