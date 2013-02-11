@@ -16,6 +16,9 @@ if not os.path.exists(CONFIG_PATH):
 
 
 def check_install(path):
+    '''
+    test, if the mxml-compiler can be found in the given flex-sdk direcotry
+    '''
     for executable in (path + '/bin/fcsh', path + '/bin/mxmlc', path + '/bin/compc'):
         if not os.path.exists(executable):
             raise AttributeError('Could not find or access ' + executable)
@@ -29,12 +32,18 @@ def check_install(path):
 
 
 def load_config():
+    '''
+    load config from file (~/.config/rook/flex/install)
+    '''
     global CONFIG
     if os.path.exists(CONFIG_PATH + '/install'):
         CONFIG = json.load(open(CONFIG_PATH + '/install'))
 
 
 def save_config():
+    '''
+    save config from file (~/.config/rook/flex/install)
+    '''
     json.dump(CONFIG, open(CONFIG_PATH + '/install', 'w'))
 
 load_config()
@@ -243,23 +252,32 @@ class SDK(object):
         args += ['-include-sources', src]
         if not output:
             output = lib_dir + name + '.swc'
-        return self.run('compc', src=src, requires=requires, external=external,
+        cmd, args = self.create_args(
+                        'compc', src=src, requires=requires, external=external,
                         output=output, args=args, config=config,
                         config_append=config_append)
+        return self.run(cmd, args)
 
     def swf(self, name, target, src='src', requires=None, external=None,
             output=None, args=None, config=None, config_append=None):
-        if not output:
-            output = 'bin/' + name + '.swf'
-        return self.run('mxmlc', src=src, requires=requires, external=external,
+        if not 'output' in kwargs:
+            kwargs['output'] = 'bin/' + name + '.swf'
+        kwargs['target'] = target
+        cmd, args = self.create_args('mxmlc', src=src, requires=requires, external=external,
                         output=output, target=target, args=args, config=config,
                         config_append=config_append)
+        return self.run(cmd, args)
 
     def lib_path(self, name):
-        '''get file path from library name (take a look in local lib first
-           and if it is not there in the global dir)'''
+        '''
+        get file path from library name (take a look in local lib or libs first
+        and if it is not there in the global dir)
+        '''
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
         f = self.source_path+'/lib/'+name+'.swc'
+        if os.path.exists(f):
+            return f
+        f = self.source_path+'/libs/'+name+'.swc'
         if os.path.exists(f):
             return f
         f = lib_dir+name+'.swc'
@@ -267,9 +285,10 @@ class SDK(object):
             return f
         raise Exception('lib %s.swc not found' % name)
 
-    def run(self, cmd, src='src', requires=None, external=None,
-            output=None, target=None, args=None, config=None,
-            config_append=None):
+    def create_args(self, cmd='mxmlc', src='src', requires=None, external=None,
+                     output=None, target=None, args=None, config=None,
+                     config_append=None):
+        '''create parameter for ActionScript 3 compiler'''
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
         if not os.path.exists(lib_dir):
             os.makedirs(lib_dir)
@@ -299,11 +318,15 @@ class SDK(object):
         args.extend(['-source-path', src,
                      '-output', output,
                      '-optimize'])
+        return (cmd, args)
+
+    def run(self, cmd='mxmlc', args=None):
+        if args is None:
+            args = []
         print 'compiling', ' '.join([self.path + '/bin/' + cmd] + list(args))
         if self.fcsh:
             return self.fcsh.build(cmd + ' ' + ' '.join(args), False)
         else:
             proc = sp.Popen([self.path + '/bin/' + cmd] + list(args))
             return proc.wait() == 0
-
 
