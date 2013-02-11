@@ -260,9 +260,8 @@ class SDK(object):
 
     def swf(self, name, target, src='src', requires=None, external=None,
             output=None, args=None, config=None, config_append=None):
-        if not 'output' in kwargs:
-            kwargs['output'] = 'bin/' + name + '.swf'
-        kwargs['target'] = target
+        if not output:
+            output = 'bin/' + name + '.swf'
         cmd, args = self.create_args('mxmlc', src=src, requires=requires, external=external,
                         output=output, target=target, args=args, config=config,
                         config_append=config_append)
