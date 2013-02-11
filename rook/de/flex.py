@@ -244,24 +244,28 @@ class SDK(object):
         check_install(self.path)
         self.fcsh = CompileShell(source_path, self.path) if fcsh else False
 
-    def swc(self, name, **kwargs):
+    def swc(self, name, src='src', requires=None, external=None, output=None,
+            config=None, args=None, config_append=None):
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
-        if not 'args' in kwargs:
-            kwargs['args'] = []
-        if 'src' in kwargs:
-            kwargs['args'] += ['-include-sources', kwargs['src']]
-        else:
-            kwargs['args'] += ['-include-sources', 'src']
-        if not 'output' in kwargs:
-            kwargs['output'] = lib_dir + name + '.swc'
-        cmd, args = self.create_args(cmd='compc', **kwargs)
+        if not args:
+            args = []
+        args += ['-include-sources', src]
+        if not output:
+            output = lib_dir + name + '.swc'
+        cmd, args = self.create_args(
+                        'compc', src=src, requires=requires, external=external,
+                        output=output, args=args, config=config,
+                        config_append=config_append)
         return self.run(cmd, args)
 
-    def swf(self, name, target, **kwargs):
+    def swf(self, name, target, src='src', requires=None, external=None,
+            output=None, args=None, config=None, config_append=None):
         if not 'output' in kwargs:
             kwargs['output'] = 'bin/' + name + '.swf'
         kwargs['target'] = target
-        cmd, args = self.create_args(**kwargs)
+        cmd, args = self.create_args('mxmlc', src=src, requires=requires, external=external,
+                        output=output, target=target, args=args, config=config,
+                        config_append=config_append)
         return self.run(cmd, args)
 
     def lib_path(self, name):
