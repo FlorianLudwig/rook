@@ -38,10 +38,6 @@ def load_config():
     global CONFIG
     if os.path.exists(CONFIG_PATH + '/install'):
         CONFIG = json.load(open(CONFIG_PATH + '/install'))
-    else:
-        raise AttributeError('can not fine flex installation file at ' + \
-                             CONFIG_PATH + '/install. please create a ' + \
-                             'config file!')
 
 
 def save_config():
