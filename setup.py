@@ -10,7 +10,8 @@ setup(
             'rmake = rook.build:main',
             'rcheck = rook.repo_check:main',
             'rdeploy = rook.deploy:main',
-            'rpip = rook.pip:main'
+            'rpip = rook.pip:main',
+            'rprompt = rook.prompt:main'
         ],
     },
 )
