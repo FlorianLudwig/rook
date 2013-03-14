@@ -134,11 +134,11 @@ class GitStatus(Thread):
                 #remote.pull()
                 proc = sp.Popen(['git', '-c', 'color.ui=always', 'pull', remote.name], cwd=dir, stdout=sp.PIPE, stderr=sp.STDOUT)
                 for line in iter(proc.stdout.readline, ''):
-                    if(line.strip() == 'Already up-to-date.'):
+                    if line.strip() == 'Already up-to-date.':
                         result += u' ' + cli.yellow('up-to-data')
                     else:
                         result += u'\n' + line.decode('utf-8').strip()
-                if(remote != repo.remotes[-1]):
+                if remote != repo.remotes[-1]:
                     result += u'\n'
 
         elif not args.cache:
@@ -165,7 +165,7 @@ class GitStatus(Thread):
 
         result_commits = u''
         if len(push_commits) > 0:
-            result_commits += cli.cyan(u'Commits to push ({0}):'.format(str(push_commits))) + u'\n'
+            result_commits += cli.cyan(u'Commits to push ({0}):'.format(len(push_commits))) + u'\n'
             result_commits += self.print_commits(push_commits)
 
         if len(pull_commits) > 0:
