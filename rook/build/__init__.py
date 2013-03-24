@@ -7,9 +7,10 @@ import shutil
 last_notification = None
 try:
     from gi.repository import Notify, GLib
-except:
+except ImportError:
     print 'Couldn\'t  "from gi.repository import Notify, GLib"'
     Notify = None
+
 
 if Notify is None or not Notify.init("Leijuna Build Deamon"):
     print 'Couldn\'t init gnome notify'
@@ -41,7 +42,7 @@ def _ignore(dirname, basename):
     Like temp files"""
     return basename.startswith('.') or basename.endswith('~') or basename.endswith('.swp') \
            or basename.endswith('.tmp') \
-           or '/.' in dirname or dirname.startswith('.')
+           or os.path.basename(dirname).startswith('.')
 
 
 class Environment(object):
@@ -72,7 +73,7 @@ class Environment(object):
 
         if Notify:
             if errors:
-                msg = '✖ Leijuna build failed'
+                msg = u'✖ Leijuna build failed'
                 count_err = sum([len(x) for x in errors.values()])
                 count_files = len(errors)
                 details = '%i ' % count_err
@@ -81,7 +82,7 @@ class Environment(object):
                 details += 'file' if count_files == 1 else 'files'
                 details += '. '
             else:
-                msg = '✔ Leijuna build successful. '
+                msg = u'✔ Leijuna build successful. '
                 details = ''
             details += 'Needed %.1fs' % build_time
             show_notification(msg, details, bool(errors))
