@@ -4,6 +4,7 @@ setup(
     name = "rook",
     version = "0.0.1",
     packages = find_packages(),
+     install_requires=['pyinotify'],
     entry_points = {
         'console_scripts': [
             'rookd = rook.de:main',
