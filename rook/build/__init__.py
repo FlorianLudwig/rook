@@ -213,12 +213,16 @@ class CopyTask(Task):
         dirname = os.path.dirname(self.dst)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
-        try:
-            shutil.copyfile(self.src, self.dst)
-        except Exception, e:
-            if os.path.exists(self.src):
-                raise e
-            self.delete()
+        # there is nothing to copy
+        # TODO: find better way to start the compiler again without having
+        # a CopyTask when the source file changes!
+        if self.src != self.dst:
+            try:
+                shutil.copyfile(self.src, self.dst)
+            except Exception, e:
+                if os.path.exists(self.src):
+                    raise e
+                self.delete()
 
 
 class SymlinkTask(Task):
