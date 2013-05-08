@@ -313,10 +313,9 @@ class SDK(object):
             for cfg in config_append:
                 if not os.path.exists(cfg):
                     raise AttributeError('file not found "' + cfg + '"')
-                args.extend(['-load-config+=%s' % cfg])
+                args.insert(0, '-load-config+=%s' % cfg)
         args.extend(['-source-path', src,
-                     '-output', output,
-                     '-optimize'])
+                     '-output', output,])
         return (cmd, args)
 
     def run(self, cmd='mxmlc', args=None):
