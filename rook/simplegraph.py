@@ -1,6 +1,7 @@
 # TODO: merge with graphviz
 import os
 import tempfile
+import subprocess
 
 
 class Node(object):
@@ -74,11 +75,11 @@ class Graph(object):
         '''create pngs from dot-files'''
         fd, name = tempfile.mkstemp()
         os.write(fd, unicode(self).encode('utf-8'))
-        cmd = 'dot %s -Tpng -o%s' % (name, path)
+        cmd = ['dot', name, '-Tpng', '-o%s' % path]
         if areamap:
-            cmd += ' -Tcmapx -o%s.map' % path
+            cmd += ['-Tcmapx', '-o%s.map' % path]
         print cmd
-        os.system(cmd)
+        subprocess.call(cmd)
         os.unlink(name)
 
 
