@@ -4,7 +4,7 @@ setup(
     name = "rook",
     version = "0.0.1",
     packages = find_packages(),
-     install_requires=['pyinotify', 'paver'],
+     install_requires=['pyinotify', 'paver', 'GitPython'],
     entry_points = {
         'console_scripts': [
             'rookd = rook.de:main',
