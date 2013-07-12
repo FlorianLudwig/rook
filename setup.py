@@ -40,4 +40,5 @@ setup(
             'rprompt = rook.prompt:main'
         ],
     },
+    cmdclass={'sdist': sdist_git}
 )
