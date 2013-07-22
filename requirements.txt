@@ -1,1 +1,0 @@
--e git+git@git.dev.rook:lib/rueckenwind.git#egg=rueckenwind
