@@ -18,17 +18,17 @@ def main():
     user = pwd.getpwuid(os.getuid())[0]
     if user == 'root':
         user = cli.red(user)
-    text = '%s@%s:%s' % (user, socket.gethostname(), os.path.abspath('.'))
+    path = os.path.abspath('.').decode('utf-8')
+    text = u'%s@%s %s' % (user, socket.gethostname(), path)
 
     if len(text) < width:
         text += ' ' * (width - len(text))
 
     if last_return_code == 0:
-        print cli.white_bg(cli.black(text))
-        sys.stdout.write('$ ')
+        print cli.white_bg(cli.black(text)).encode('utf-8')
     else:
         print cli.red_bg(text)
-        sys.stdout.write('$ ')
+    sys.stdout.write('$ ')
 
 
 if __name__ == '__main__':

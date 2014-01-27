@@ -4,8 +4,6 @@ import termios
 import struct
 
 
-
-
 def color(t, c, bg=0):
     return u'\x1b[' + unicode(c) + u'm' + unicode(t) + u'\x1b[0m'
 
