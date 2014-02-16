@@ -310,7 +310,7 @@ def main():
         sp.call(['pip', 'install', '-e', pkg])
 
     for pkg in needs_reinstall:
-        sp.call(['pip', 'install', '-e', pkg])
+        sp.call(['pip', 'uninstall', '-y', pkg])
         sp.call(['pip', 'install', '-e', pkg])
 
 
