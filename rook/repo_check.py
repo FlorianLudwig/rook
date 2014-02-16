@@ -18,6 +18,7 @@ import os
 import sys
 import shutil
 import stat
+import copy
 import time
 import argparse
 import re
@@ -28,6 +29,7 @@ from git import Repo, Git, InvalidGitRepositoryError
 from git.exc import GitCommandError
 
 from . import cli, git
+import fpt
 
 git_threads = []
 semaphore = Semaphore(8)
@@ -198,6 +200,44 @@ class GitStatus(Thread):
     def format_date(self, date):
         return time.strftime(u'%Y-%m-%d %H:%M', time.localtime(date))
 
+
+def pip_list(*args):
+    env = copy.copy(os.environ)
+    env['lang'] = 'C'
+    cmd = ['pip', 'list']
+    cmd.extend(args)
+    proc = sp.Popen(cmd, stdout=sp.PIPE, stderr=open('/dev/null'), env=env)
+    for line in proc.stdout.readlines():
+        if 'uses an insecure transport scheme' in line:
+            continue
+        if 'not find a version that satisfies the requirement' in line:
+            continue
+        pkg, vers = line.strip().split(' ', 1)
+        assert vers[0] == '(', repr(vers)
+        assert vers[-1] == ')', repr(vers)
+        yield pkg, vers[1:-1]
+
+
+def get_py_packages():
+    pkgs = {}
+    for pkg, vers in pip_list('-l'):
+        data = {}
+        if ', ' in vers:
+            vers, path = vers.split(', ', 1)
+            data['editable'] = os.path.realpath(path)
+        data['version'] = vers
+        pkgs[pkg] = data
+
+    # not yet used
+    # for pkg, vers in pip_list('-l', '-o'):
+    #     current = 'Current: ' + pkgs[pkg]['version'] + ' Latest: '
+    #     assert vers.startswith(current)
+    #     vers = vers[len(current):]
+    #     pkgs[pkg]['update'] = vers
+
+    return pkgs
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawTextHelpFormatter)
@@ -250,6 +290,29 @@ def main():
         less.wait()
     else:
         print result.strip()
+
+    print 'checking python libs'
+    pkgs = get_py_packages()
+    env_dir = os.environ['VIRTUAL_ENV'] + '/src/'
+    needs_reinstall = []
+    needs_install = []
+    for path in os.listdir(env_dir):
+        path = os.path.realpath(env_dir + path)
+        if os.path.exists(path + '/setup.py'):
+            data = fpt.get_setup_data(path + '/setup.py')
+            pkg = data['name']
+            if pkg not in pkgs:
+                needs_install.append(path)
+            elif pkgs[pkg].get('editable') != path:
+                needs_reinstall.append(path)
+
+    for pkg in needs_install:
+        sp.call(['pip', 'install', '-e', pkg])
+
+    for pkg in needs_reinstall:
+        sp.call(['pip', 'install', '-e', pkg])
+        sp.call(['pip', 'install', '-e', pkg])
+
 
 if __name__ == '__main__':
     main()
