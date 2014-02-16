@@ -291,27 +291,28 @@ def main():
     else:
         print result.strip()
 
-    print 'checking python libs'
-    pkgs = get_py_packages()
-    env_dir = os.environ['VIRTUAL_ENV'] + '/src/'
-    needs_reinstall = []
-    needs_install = []
-    for path in os.listdir(env_dir):
-        path = os.path.realpath(env_dir + path)
-        if os.path.exists(path + '/setup.py'):
-            data = fpt.get_setup_data(path + '/setup.py')
-            pkg = data['name']
-            if pkg not in pkgs:
-                needs_install.append(path)
-            elif pkgs[pkg].get('editable') != path:
-                needs_reinstall.append(path)
+    if args.pull:
+        print 'checking python libs'
+        pkgs = get_py_packages()
+        env_dir = os.environ['VIRTUAL_ENV'] + '/src/'
+        needs_reinstall = []
+        needs_install = []
+        for path in os.listdir(env_dir):
+            path = os.path.realpath(env_dir + path)
+            if os.path.exists(path + '/setup.py'):
+                data = fpt.get_setup_data(path + '/setup.py')
+                pkg = data['name']
+                if pkg not in pkgs:
+                    needs_install.append(path)
+                elif pkgs[pkg].get('editable') != path:
+                    needs_reinstall.append(path)
 
-    for pkg in needs_install:
-        sp.call(['pip', 'install', '-e', pkg])
+        for pkg in needs_install:
+            sp.call(['pip', 'install', '-e', pkg])
 
-    for pkg in needs_reinstall:
-        sp.call(['pip', 'uninstall', '-y', pkg])
-        sp.call(['pip', 'install', '-e', pkg])
+        for pkg in needs_reinstall:
+            sp.call(['pip', 'uninstall', '-y', pkg])
+            sp.call(['pip', 'install', '-e', pkg])
 
 
 if __name__ == '__main__':
