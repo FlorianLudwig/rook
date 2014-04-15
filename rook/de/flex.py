@@ -5,13 +5,25 @@ import time
 import fcntl
 import sys
 import json
+import logging
+import jinja2
+import tempfile
+import re
 
+logger = logging.getLogger('rook.de.flex')
+logger.setLevel(logging.DEBUG)
+sh = logging.StreamHandler()
+logger.addHandler(sh)
 
+BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+TEMPLATE_PATH = os.path.join(BASE_PATH, 'templates')
+TESTRUNNER_TPL = os.path.join(TEMPLATE_PATH, 'FlexUnitRunner.mxml')
 CONFIG_PATH = os.path.abspath(os.path.expanduser('~/.config/rook/flex'))
+ROOK_PATH = os.path.abspath(os.path.expanduser('~/.rook/flex'))
 CONFIG = {}
 
 if not os.path.exists(CONFIG_PATH):
-    print 'creating config dir', CONFIG_PATH
+    logger.info('creating config dir {}'.format(CONFIG_PATH))
     os.makedirs(CONFIG_PATH)
 
 
@@ -19,15 +31,15 @@ def check_install(path):
     """
     test, if the mxml-compiler can be found in the given flex-sdk direcotry
     """
-    for executable in (path + '/bin/fcsh',
-                       path + '/bin/mxmlc',
-                       path + '/bin/compc'):
+    for executable in (os.path.join(path, 'bin', 'fcsh'),
+                       os.path.join(path, 'bin', 'mxmlc'),
+                       os.path.join(path, 'bin', 'compc')):
         if not os.path.exists(executable):
             raise AttributeError('Could not find or access ' + executable)
 
         if not os.access(executable, os.X_OK):
             raise AttributeError('Executable on  %s not set' % executable)
-    proc = sp.Popen([path + '/bin/mxmlc', '-version'], stdout=sp.PIPE)
+    proc = sp.Popen([os.path.join(path, 'bin', 'mxmlc'), '-version'], stdout=sp.PIPE)
     version = proc.communicate()[0]
     version = version.replace('Version', '').strip()
     return version
@@ -51,22 +63,6 @@ def save_config():
 load_config()
 
 
-def print_download():
-    print
-    print 'Needing Flex SDK Version'
-    print 'Direct Download: http://download.macromedia.com/pub/flex/sdk/flex_sdk_4.6.zip (build 23201)'
-    print 'FlexDownloads: http://www.adobe.com/devnet/flex/flex-sdk-download-all.html'
-    sys.exit(1)
-
-
-def fix_permissions():
-    print 'try (as root):'
-    print 'cd ' + config.FLEX4_PATH
-    print 'find . -type d | xargs -I{} chmod o+xr "{}"'
-    print 'find . | xargs -I{} chmod o+r "{}"'
-    print 'chmod +x bin/*'
-
-
 class ErrorParser(object):
     """Parser for Adobe Flex Compiler"""
     def __init__(self):
@@ -74,7 +70,8 @@ class ErrorParser(object):
 
     def parse(self, stderr, stdout):
         if self.stderr != '':
-            raise Exception('unknown error during build:', self.stderr)
+            raise Exception('unknown error during build:', self.stderr +
+                            '\nstdout:\n' + stdout)
         errors = {}
         self.stderr = stderr
         while self.stderr.strip():
@@ -89,13 +86,10 @@ class ErrorParser(object):
             error['ln'] = ln
             data = self.consume_till('\n\n')
             if ':' in data:
-                type, message = data.split(':', 1)
+                err_type, message = data.split(':', 1)
             else:
                 raise AttributeError('Cant parse error, ' + data)
-                print '*' * 80
-                print 'Kein : gefunden'
-                print repr(data)
-            error['type'] = type.strip().lower()
+            error['type'] = err_type.strip().lower()
             error['message'] = message.strip()
             if self.stderr:
                 self.consume_till('\n\n')
@@ -118,16 +112,11 @@ class CompileShell(object):
         fcsh = '%s/bin/fcsh' % flexsdk_path
         cmd = 'cd %s; LANG=C %s' % (source_path, fcsh)
         if not os.path.exists(fcsh):
-            print 'flex install not correct.'
-            print 'check config.py - FLEX4_PATH'
-            print 'Maybe permissions wrong?'
-            fix_permissions()
-            print_download()
+            logger.error('flex compile shell not found, check your flex path')
 
         if not os.access(fcsh, os.X_OK):
-            print 'Permission denied'
-            fix_permissions()
-            print_download()
+            logger.error('Permission denied')
+
         self.fcsh = sp.Popen(cmd, shell=True,
                              stdin=sp.PIPE, stderr=sp.PIPE, stdout=sp.PIPE)
 
@@ -159,6 +148,9 @@ class CompileShell(object):
         return stdout, stderr
 
     def build(self, cmd, clear):
+        """
+        call fcsh and execute build
+        """
         if clear:
             self.fcsh.stdin.write(cmd + '\n')
             stdout, stderr = self.read()
@@ -169,11 +161,11 @@ class CompileShell(object):
             else:
                 try:
                     t_id = stdout.split('fcsh: ')[1].split(' ')[0]
-                except:
-                    print 'WARNING!!!!!!!!!! fcsh: Assigned " not found in:\n' + stdout
+                except IndexError:
+                    logger.warn('fcsh: Assigned " not found in:\n' + stdout)
             if t_id:
                 self.fcsh.stdin.write('clear %s\n' % t_id)
-                self.read(self)
+                self.read()
             return stdout, stderr
         else:
             if not cmd in self.targets:
@@ -205,8 +197,7 @@ class CompileShell(object):
                 stdout, stderr = self.read()
                 if '-d' in sys.argv:
                     print 'fcsh:'
-                    print self.logg
-                    print
+                    print self.log
                 return error_parser.parse(stderr, stdout)
 
 
@@ -233,7 +224,8 @@ class CompileShellJob(object):
 
 class SDK(object):
     """Represents a SDK in a specific version"""
-    def __init__(self, version, source_path=None, fcsh=False):
+    def __init__(self, version='current', source_path=None, fcsh=False):
+        self.log = []
         if source_path is None:
             source_path = '.'
         source_path = os.path.abspath(source_path)
@@ -246,8 +238,8 @@ class SDK(object):
         check_install(self.path)
         self.fcsh = CompileShell(source_path, self.path) if fcsh else False
 
-    def swc(self, name, src='src', requires=None, external=None, output=None,
-            config=None, args=None, config_append=None):
+    def swc(self, name, src='src', requires=None, external=None, libs=None,
+            output=None, config=None, args=None, config_append=None, log=True):
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
         if not args:
             args = []
@@ -255,26 +247,52 @@ class SDK(object):
         if not output:
             output = lib_dir + name + '.swc'
         cmd, args = self.create_args(
-            'compc', src=src, requires=requires, external=external,
+            'compc', src=src, requires=requires, external=external, libs=libs,
             output=output, args=args, config=config,
             config_append=config_append)
-        return self.run(cmd, args)
+        t = time.time()
+        run = self.run(cmd, args)
+        if log:
+            self.log.append({
+                'type': 'compile ' + output,
+                'time': time.time() - t
+            })
+        return run
 
-    def swf(self, name, target, src='src', requires=None, external=None,
-            output=None, args=None, config=None, config_append=None):
+    def swf(self, name, target, src='src', requires=None, libs=None,
+            external=None, output=None, args=None,
+            config=None, config_append=None,
+            log=True):
         if not output:
             output = 'bin/' + name + '.swf'
         cmd, args = self.create_args(
-            'mxmlc', src=src, requires=requires, external=external,
+            'mxmlc', src=src, requires=requires, external=external, libs=libs,
             output=output, target=target, args=args, config=config,
             config_append=config_append)
-        return self.run(cmd, args)
+        t = time.time()
+        run = self.run(cmd, args)
+        if log:
+            self.log.append({
+                'type': 'compile ' + output,
+                'time': time.time() - t
+            })
+        return run
+
+    def print_stats(self):
+        print '-'*20
+        for stat in self.log:
+            print '%7.2fs needed to %s.' % (stat['time'], stat['type'])
+        print '-'*20
+        print '%7.2fs needed for all tasks.' % \
+              sum([s['time'] for s in self.log])
 
     def lib_path(self, name):
         """
         get file path from library name (take a look in local lib or libs first
         and if it is not there in the global dir)
         """
+        if os.path.exists(name):
+            return name
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
         f = self.source_path + '/lib/' + name + '.swc'
         if os.path.exists(f):
@@ -289,7 +307,7 @@ class SDK(object):
 
     def create_args(self, cmd='mxmlc', src='src', requires=None, external=None,
                     output=None, target=None, args=None, config=None,
-                    config_append=None):
+                    config_append=None, libs=None):
         """create parameter for ActionScript 3 compiler"""
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
         if not os.path.exists(lib_dir):
@@ -298,10 +316,15 @@ class SDK(object):
             args = []
         if external:
             for ext in external:
-                args.extend(['-external-library-path+=%s' % self.lib_path(ext)])
+                args.extend([
+                    '-external-library-path+=%s' % self.lib_path(ext)])
         if requires:
             for req in requires:
-                args.extend(['-compiler.include-libraries+=%s' % self.lib_path(req)])
+                args.extend([
+                    '-compiler.include-libraries+=%s' % self.lib_path(req)])
+        if libs:
+            for lib in libs:
+                args.extend(['-library-path+=%s' % self.lib_path(lib)])
         if target:
             args.insert(0, target)
         # override default config from flex framework
@@ -317,17 +340,75 @@ class SDK(object):
                 if not os.path.exists(cfg):
                     raise AttributeError('file not found "' + cfg + '"')
                 args.insert(0, '-load-config+=%s' % cfg)
-        args.extend(['-source-path', src,
-                     '-output', output,])
-        return (cmd, args)
+        args.append('-source-path')
+        if isinstance(src, basestring):
+            src = [src]
+        args.extend(src)
+        args.extend(['-output', output])
+        return cmd, args
 
     def run(self, cmd='mxmlc', args=None):
         if args is None:
             args = []
-        print 'compiling', ' '.join([self.path + '/bin/' + cmd] + list(args))
+        logger.info('compiling: ' +
+                    ' '.join([self.path + '/bin/' + cmd] + list(args)))
         if self.fcsh:
             return self.fcsh.build(cmd + ' ' + ' '.join(args), False)
         else:
             proc = sp.Popen([self.path + '/bin/' + cmd] + list(args))
             return proc.wait() == 0
 
+    def test(self, command=None, test_dir='test/', src='src/', requires=None,
+             external=None, config=None, args=None, log=True, libs=None,
+             headless=True):
+        t = time.time()
+        tests = []
+        # generate test runner file
+        for root, sub, files in os.walk(test_dir):
+            for file_name in files:
+                filename = os.path.join(root, file_name)
+                content = open(filename, 'r').read()
+                test_file = {}
+                # get package name
+                m = re.search('package[ ]+(?P<pkg_name>[0-9a-zA-Z\._]*)', content)
+                test_file['pkg_name'] = m.group('pkg_name')
+                # get class name
+                m = re.search('class[ ]+(?P<cls_name>[0-9a-zA-Z\._]*)', content)
+                test_file['cls_name'] = m.group('cls_name')
+                tests.append(test_file)
+
+        tmp_dir = tempfile.mkdtemp('test_build')
+        content = jinja2.Template(file(TESTRUNNER_TPL, 'r').read()).render(tests=tests)
+        flex_unit_runner = os.path.join(tmp_dir, 'FlexUnitRunner.mxml')
+        file(flex_unit_runner, 'w').write(content.encode('utf-8'))
+
+        # compile test runner
+        out = os.path.join(tmp_dir, 'out')
+        os.makedirs(out)
+        if isinstance(src, basestring):
+            src = [src]
+        if isinstance(test_dir, basestring):
+            test_dir = [test_dir]
+        if not args:
+            args = []
+        if headless:
+            args += ['-headless-server=true']
+        self.swf(
+            name='FlexUnitRunner',
+            output=os.path.join(out, 'FlexUnitRunner.swf'),
+            target=flex_unit_runner,
+            src=test_dir+src,
+            external=external,
+            requires=requires,
+            args=args,
+            config=config,
+            libs=libs,
+            log=False)
+        if log:
+            self.log.append({
+                'type': 'testing in folder {}'.format(test_dir),
+                'time': time.time() - t
+            })
+        if not command:
+            command = '/opt/flashplayerdebugger'
+        pass
