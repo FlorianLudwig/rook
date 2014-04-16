@@ -243,7 +243,10 @@ class SDK(object):
         lib_dir = os.environ['VIRTUAL_ENV'] + '/lib/swc/'
         if not args:
             args = []
-        args += ['-include-sources', src]
+        args.append('-include-sources')
+        if isinstance(src, basestring):
+            src = [src]
+        args.extend(src)
         if not output:
             output = lib_dir + name + '.swc'
         cmd, args = self.create_args(
@@ -347,9 +350,54 @@ class SDK(object):
         args.extend(['-output', output])
         return cmd, args
 
+
+    def doc(self, src='src', libs=None, args=None, ext_src=None, log=True):
+        if ext_src:
+            # required external sources that should not appear in the
+            # documentation we just build a swc for that
+            tmp_dir = tempfile.mkdtemp('test_build')
+            doc_swc = os.path.join(tmp_dir, 'Documentation')
+            self.swc('Documentation', src=ext_src, libs=libs, 
+                     output=doc_swc, log=True)
+            libs.append(doc_swc)
+        cmd, args = self.create_args_doc(src=src, libs=libs, args=args)
+        t = time.time()
+        run = self.run(cmd, args)
+        if log:
+            self.log.append({
+                'type': 'asdoc',
+                'time': time.time() - t
+            })
+        return run
+
+
+    def create_args_doc(self, cmd='asdoc', src='src', libs=None, args=None):
+        """
+        generate ActionScript documentation with asdoc
+        """
+        if args is None:
+            args = []
+        if not src:
+            raise AttributeError('src not set')
+        elif isinstance(src, basestring):
+            src = [src]
+        args.append('-source-path')
+        if isinstance(src, basestring):
+            src = [src]
+        args.extend(src)
+        args.append('-doc-sources')
+        args.extend(src)
+        
+        if libs:
+            for lib in libs:
+                args.extend(['-library-path+=%s' % self.lib_path(lib)])
+        return cmd, args
+
+
     def run(self, cmd='mxmlc', args=None):
         if args is None:
             args = []
+        print args
         logger.info('compiling: ' +
                     ' '.join([self.path + '/bin/' + cmd] + list(args)))
         if self.fcsh:
