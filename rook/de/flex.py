@@ -395,6 +395,10 @@ class SDK(object):
 
 
     def run(self, cmd='mxmlc', args=None):
+        """
+        run process from sdk using fcsh or directly
+         (compile, create documentation, ...)
+        """
         if args is None:
             args = []
         print args
