@@ -350,7 +350,6 @@ class SDK(object):
         args.extend(['-output', output])
         return cmd, args
 
-
     def doc(self, src='src', libs=None, args=None, ext_src=None, log=True):
         if ext_src:
             # required external sources that should not appear in the
@@ -369,7 +368,6 @@ class SDK(object):
                 'time': time.time() - t
             })
         return run
-
 
     def create_args_doc(self, cmd='asdoc', src='src', libs=None, args=None):
         """
@@ -392,7 +390,6 @@ class SDK(object):
             for lib in libs:
                 args.extend(['-library-path+=%s' % self.lib_path(lib)])
         return cmd, args
-
 
     def run(self, cmd='mxmlc', args=None):
         """
