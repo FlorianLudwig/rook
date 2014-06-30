@@ -1,4 +1,6 @@
 """Helper function for pavement"""
+from __future__ import print_function
+
 import os
 import sys
 import time
@@ -8,24 +10,24 @@ import subprocess
 import atexit
 import string
 import random
+import select
 from multiprocessing import Process, Pipe
 
 
 ## logging
+_org_print = print
+def print(*args):
+    _org_print(*args)
+    sys.stdout.flush()
 
-
-
-def fake():
-    print 'i am fake!'
 
 class RPIPServer(object):
     def start(self):
-        print 'Starting RPIP Server'
         cmd_pipe, child_conn = Pipe()
         self.secret = ''.join(random.choice(string.ascii_letters) for i in xrange(32))
         self.proc = Process(target=self.run, args=(child_conn,))
         self.proc.start()
-        print 'RPIPServ process spawned'
+        print('RPIPServ process spawned')
         sys.stdout.flush()
         self.sock_path = cmd_pipe.recv()
         sys.stdout.flush()
@@ -49,15 +51,28 @@ class RPIPServer(object):
             except socket.error:
                 i += 1
         cmd_pipe.send(sock_path)
+        os.environ['RPIP_SOCK'] = sock_path
+        # this is not really secret, the environment of child process can be
+        # read through /proc/<pid>/environ by processes of the same user
+        os.environ['RPIP_SECRET'] = self.secret
 
         ## actual server
         sock.listen(1)
         done = set()
+        children = []
 
         while True:
-            print 'waiting for next connection'
+            print('waiting for next connection')
             sys.stdout.flush()
-            connection, client_address = sock.accept()
+            while 1:
+                if select.select([sock], [], [], 0.01)[0]:
+                    connection, client_address = sock.accept()
+                for child, child_con in children:
+                    print ('checking child')
+                    child.poll()
+                    if child.returncode is not None:
+                        connection.send(str(ret))
+                        child_con.close()
 
             data = ''
             while 1:
@@ -69,19 +84,16 @@ class RPIPServer(object):
                     break
 
             if not '|' in data:
-                print 'format not correct ' + repr(data)
-                sys.stdout.flush()
+                print('format not correct ' + repr(data))
                 continue
 
             secret, data = data.split('|', 1)
             if secret != self.secret:
-                print 'wrong secret, ignoring ' + repr(data)
-                sys.stdout.flush()
+                print('wrong secret, ignoring ' + repr(data))
                 continue
 
             if data == 'CMD:QUIT':
-                print 'shutting down rpip server'
-                sys.stdout.flush()
+                print('shutting down rpip server')
                 connection.send('0')
                 connection.close()
                 break
@@ -96,26 +108,26 @@ class RPIPServer(object):
             ret = '0'
             for rep in reps:
                 if rep not in done:
-                    cmd = 'pip install --exists-action=i ' + rep
-                    print 'running command: ' + cmd
-                    sys.stdout.flush()
-                    exit = subprocess.call(cmd, shell=True)
-                    if exit != 0:
-                        print >> sys.stderr, cmd + ' FAILED'
-                        sys.stderr.flush()
-                        ret = str(exit)
-                        break
-            # all ok, sending return code 0
-            connection.send(ret)
-            done.update(reps)
-            connection.close()
+                    done.add(rep)
+                    assert rep.startswith('-e '), repr(rep)
+                    cmd = ['pip', 'install', '--exists-action', 'i']
+                    cmd += rep.split(' ', 1)
+                    print(cmd)
+                    if 'PIP_EXISTS_ACTION' in os.environ:
+                        del os.environ['PIP_EXISTS_ACTION']
+                    log = open('/tmp/pip.log', 'w')
+                    print ('spawned child -1')
+                    proc = subprocess.Popen(cmd, env=os.environ, stdout=log)
+                    children.append((proc, connection))
+                    print ('spawned child')
+
 
     def _cleanup(self):
         if os.path.exists(self.sock_path):
             os.unlink(self.sock_path)
 
     def stop(self):
-        print 'stopping RPIP Server'
+        print('stopping RPIP Server')
         send_msg('CMD:QUIT')
         sys.stdout.flush()
         self.proc.join()
@@ -143,9 +155,9 @@ def requirements_txt():
             serv = RPIPServer()
             serv.start()
 
-        print 'Installing requirements: ' + os.path.abspath('requirements.txt')
+        print('Installing requirements: ' + os.path.abspath('requirements.txt'))
         code = int(send_msg(open('requirements.txt').read()))
-        print 'return code: ' + str(code)
+        print('return code: ' + str(code))
         sys.stdout.flush()
 
         if serv:
