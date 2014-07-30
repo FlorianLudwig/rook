@@ -35,7 +35,7 @@ setup(
     name="rook",
     version="0.0.1" + VERSION_SUFFIX,
     packages=find_packages(),
-    install_requires=['pyinotify', 'paver', 'GitPython==0.3.2.RC1', 'rueckenwind==0.3.0'],
+    install_requires=['pyinotify', 'paver', 'GitPython==0.3.2.RC1', 'rueckenwind>=0.3.0.git0'],
     package_data={'rook': ['build/playerglobal.10.1.swc', 'de/templates/error.html', 'de/templates/index.html']},
     entry_points= {
         'console_scripts': [
