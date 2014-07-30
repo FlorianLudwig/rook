@@ -37,7 +37,7 @@ setup(
     packages=find_packages(),
     install_requires=['pyinotify', 'paver', 'GitPython==0.3.2.RC1', 'rueckenwind==0.3.0'],
     package_data={'rook': ['build/playerglobal.10.1.swc', 'de/templates/error.html', 'de/templates/index.html']},
-    entry_points={
+    entry_points= {
         'console_scripts': [
             'rookd = rook.de:main',
             'rmake = rook.build:main',
